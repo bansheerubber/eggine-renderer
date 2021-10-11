@@ -1,0 +1,64 @@
+include $(DEVKITPRO)/devkitA64/base_rules
+include $(DEVKITPRO)/libnx/switch_rules
+
+target = game
+
+LIBDIRS = $(LIBNX) $(PORTLIBS)
+INCLUDENX	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
+	$(foreach dir,$(LIBDIRS),-I$(dir)/include)
+
+LIBNX	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+SWITCH = -ffunction-sections -fno-rtti
+
+ARCH = -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft
+LIBS = -lglfw3 -lglad -lEGL -lglapi -ldrm_nouveau -lnx -lm -lglad -lpng -lz -lbz2
+INCLUDE = -Iinclude/common -Iinclude/common/robin-map/include -Iinclude/common/fmt/include/ $(INCLUDENX)
+LIBPATHS = $(LIBNX) -Llibnx
+
+CPPFLAGS = -D__switch__ -O2 -Wall -Wno-switch -Wno-class-memaccess -Wno-delete-incomplete -Wno-attributes -fPIE --static -fno-semantic-interposition $(ARCH) $(SWITCH)
+LDFLAGS = -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -fPIE -fPIC
+
+cpp_source = $(shell find src -type f -name "*.cc" ! -path "src/include*")
+cpp_source_tmp = $(subst src, tmp, $(cpp_source))
+cpp_source_without = $(subst src\/, , $(cpp_source))
+
+cpp_headers = $(shell find src -type f -name "*.h" ! -path "src/include*")
+cpp_headers_tmp = $(subst src, tmp, $(cpp_headers))
+
+cpp_objects = $(patsubst %.cc, %.o, $(cpp_source))
+cpp_objects_tmp = $(patsubst %.cc, %.o, $(cpp_source_tmp))
+cpp_objects_without = $(patsubst src\/, , $(cpp_source))
+
+.PHONY: default clean
+
+# force synchronization for preprocessor
+default:
+	@"$(MAKE)" preprocessor -f Makefile.nx --no-print-directory
+	@"$(MAKE)" dist/$(target) -f Makefile.nx --no-print-directory
+
+preprocessor:
+	@echo -e "   PY      tools/preprocessor.py"
+	@python3 tools/preprocessor.py
+
+# glad/gl.o: glad/gl.c
+# 	@echo -e "   CXX      $@"
+# 	@$(CXX) $(CPPFLAGS) $(INCLUDE) $(LIBPATHS) -c $< -o $@
+
+$(cpp_objects_tmp) : %.o : %.cc
+	@mkdir -p $(dir $@)
+	@echo -e "   CXX      $<"
+	@$(CXX) $(CPPFLAGS) $(INCLUDE) -c $< -o $@
+
+dist/$(target): $(cpp_objects_tmp)
+	@mkdir -p $(dir dist/$(target))
+	@echo -e "   CXX      $@"
+	@$(CXX) $(cpp_objects_tmp) -Wall $(LIBPATHS) $(LDFLAGS) $(LIBS) -o $@
+	@nacptool --create eggine bansheerubber 0.0.1 dist/eggine.nacp
+	@elf2nro dist/$(target) dist/$(target).nro --icon=dist/egg.png --nacp=dist/eggine.nacp --romfsdir=dist/romfs
+
+clean:
+	@echo -e "   RM      tmp"
+	@rm -Rf tmp
+
+	@echo -e "   RM      dist/$(target)"
+	@rm -f dist/$(target)
