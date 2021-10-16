@@ -1,7 +1,11 @@
-#include <fstream>
-#include <string.h>
+#ifndef __switch__
+#include <glad/gl.h>
+#endif
 
 #include "shader.h"
+
+#include <fstream>
+#include <string.h>
 
 #include "window.h"
 
@@ -24,14 +28,22 @@ void render::Shader::bind() {
 	
 }
 
-void render::Shader::load(string filename) {
-	#ifdef __switch__
+void render::Shader::loadFromFile(string filename, ShaderType type) {
 	ifstream file(filename);
-
 	file.seekg(0, file.end);
 	unsigned long length = file.tellg();
 	file.seekg(0, file.beg);
+	char* buffer = new char[length];
+	file.read((char*)buffer, length);
+	file.close();
 
+	this->load(buffer, length, type);
+
+	delete[] buffer;
+}
+
+void render::Shader::load(char* buffer, size_t length, ShaderType type) {
+	#ifdef __switch__
 	DkshHeader header {
 		magic: 0,
 		headerSize: 0,
@@ -40,16 +52,15 @@ void render::Shader::load(string filename) {
 		programsOffset: 0,
 		programCount: 0,
 	};
-	file.read((char*)&header, sizeof(header));
+	memcpy(&header, buffer, sizeof(header));
 
 	if(header.magic != 0x48534b44) {
 		printf("couldn't load dksh\n");
 		return;
 	}
 
-	file.seekg(0, file.beg);
 	vector<char> controlBuffer(header.controlSize);
-	file.read(controlBuffer.data(), header.controlSize);
+	memcpy(controlBuffer.data(), buffer, header.controlSize);
 
 	this->memory = this->window->memory.allocate(
 		DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached | DkMemBlockFlags_Code,
@@ -57,9 +68,7 @@ void render::Shader::load(string filename) {
 		DK_SHADER_CODE_ALIGNMENT
 	);
 
-	file.read((char*)this->memory->cpuAddr(), header.codeSize); // read code straight into code memory
-
-	file.close();
+	memcpy(this->memory->cpuAddr(), &buffer[header.controlSize], header.codeSize); // read code straight into code memory
 
 	dk::ShaderMaker{this->memory->parent->block, this->memory->start}
 		.setControl(controlBuffer.data())
@@ -69,6 +78,31 @@ void render::Shader::load(string filename) {
 	if(!this->shader.isValid()) {
 		printf("shader not valid\n");
 		exit(1);
+	}
+	#else
+	GLenum glType = type == SHADER_FRAGMENT ? GL_FRAGMENT_SHADER : GL_VERTEX_SHADER;
+	
+	GLuint shader = glCreateShader(glType);
+	int glLength = length;
+	glShaderSource(shader, 1, &buffer, &glLength);
+	glCompileShader(shader);
+
+	GLint compiled = 0;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+	if(compiled == GL_FALSE) {
+		// print the error log
+		GLint logLength = 0;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
+
+		GLchar* log = new GLchar[logLength];
+		glGetShaderInfoLog(shader, logLength, &logLength, log);
+
+		glDeleteShader(shader);
+
+		printf("failed to compile shader:\n%.*s\n", logLength, log);
+	}
+	else {
+		this->shader = shader;
 	}
 	#endif
 }

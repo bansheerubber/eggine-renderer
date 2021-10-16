@@ -12,6 +12,8 @@
 
 namespace render {
 	class VertexBuffer {
+		friend class VertexAttributes;
+		
 		public:
 			VertexBuffer(class Window* window);
 			~VertexBuffer();

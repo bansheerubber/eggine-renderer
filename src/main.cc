@@ -1,9 +1,10 @@
-#define __switch__
+#include <glad/gl.h>
 
 #include <array>
 #include <glm/vec3.hpp>
 #include <stdio.h>
 
+#include "renderer/program.h"
 #include "renderer/shader.h"
 #include "renderer/vertexAttributes.h"
 #include "renderer/vertexBuffer.h"
@@ -45,28 +46,31 @@ int main(int argc, char* argv[]) {
 	triangleBuffer.setData(triangleVertices, sizeof(triangleVertices), alignof(glm::vec3));
 
 	render::Shader vertexShader(&window);
-	vertexShader.load("romfs:/basic_vsh.dksh");
+	vertexShader.loadFromFile("romfs/basic_vsh.glsl", render::SHADER_VERTEX);
 
 	render::Shader fragmentShader(&window);
-	fragmentShader.load("romfs:/color_fsh.dksh");
+	fragmentShader.loadFromFile("romfs/color_fsh.glsl", render::SHADER_FRAGMENT);
 
-	window.memory.print();
+	render::Program program(&window);
+	program.addShader(&vertexShader);
+	program.addShader(&fragmentShader);
+
+	// window.memory.print();
 
 	render::VertexAttributes triangleAttributes(&window);
 	triangleAttributes.addVertexAttribute(&triangleBuffer, 0, 3, 32, 0, sizeof(glm::vec3), 0);
 
-	std::array<DkShader const*, 2> shaderArray = { &vertexShader.shader, &fragmentShader.shader };
+	// window.commandBuffer.draw(DkPrimitive_Triangles, 3, 1, 0, 0);
 
-	window.commandBuffer.bindShaders(DkStageFlag_GraphicsMask, shaderArray);
-	triangleAttributes.bind();
-	window.commandBuffer.draw(DkPrimitive_Triangles, 3, 1, 0, 0);
+	// window.commandList = window.commandBuffer.finishList();
 
-	triangleBuffer.bind(0);
-
-	window.commandList = window.commandBuffer.finishList();
-
-	for(unsigned int i = 0; i < 200; i++) {
+	for(unsigned int i = 0; i < 500; i++) {
 		window.prerender();
+
+		program.bind();
+		triangleAttributes.bind();
+		glDrawArrays(GL_TRIANGLES, 0, 3);
+
 		window.render();
 	}
 

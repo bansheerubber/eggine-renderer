@@ -1,3 +1,7 @@
+#ifndef __switch__
+#include <glad/gl.h>
+#endif
+
 #include "vertexAttributes.h"
 #include "vertexBuffer.h"
 
@@ -30,6 +34,9 @@ void render::VertexAttributes::bind() {
 
 	this->window->commandBuffer.bindVtxAttribState(dk::detail::ArrayProxy(this->attributeStates.size(), (const DkVtxAttribState*)this->attributeStates.data()));
 	this->window->commandBuffer.bindVtxBufferState(dk::detail::ArrayProxy(this->bufferStates.size(), (const DkVtxBufferState*)this->bufferStates.data()));
+	#else
+	this->buildCommandLists();
+	glBindVertexArray(this->vertexArrayObject);
 	#endif
 }
 
@@ -65,5 +72,25 @@ void render::VertexAttributes::buildCommandLists() {
 			0,
 		});
 	}
+	#else
+	if(this->vertexArrayObject != GL_INVALID_INDEX) {
+		return;
+	}
+
+	glGenVertexArrays(1, &this->vertexArrayObject);
+	glBindVertexArray(this->vertexArrayObject);
+	
+	for(VertexAttribute &attribute: this->attributes) {
+		glBindBuffer(GL_ARRAY_BUFFER, attribute.buffer->bufferId);
+		glVertexAttribPointer(attribute.attributeLocation, attribute.vectorLength, GL_FLOAT, GL_FALSE, attribute.stride, 0);
+
+		if(attribute.divisor) {
+			glVertexAttribDivisor(attribute.attributeLocation, attribute.divisor);
+		}
+
+		glEnableVertexAttribArray(attribute.attributeLocation);
+	}
+
+	glBindVertexArray(0);
 	#endif
 }

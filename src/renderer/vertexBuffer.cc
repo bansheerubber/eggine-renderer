@@ -4,7 +4,6 @@
 #include <glad/gl.h>
 #endif
 
-#include "../util/align.h"
 #include "vertexBuffer.h"
 #include "window.h"
 
@@ -103,6 +102,4 @@ void render::VertexBuffer::destroyBuffer() {
 		glDeleteBuffers(1, &this->bufferId);
 	}
 	#endif
-
-	this->size = 0;
 }

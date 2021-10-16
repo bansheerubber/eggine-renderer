@@ -39,6 +39,8 @@ namespace render {
 			vector<VertexBuffer*> bufferBindOrder;
 			vector<DkVtxAttribState> attributeStates;
 			vector<DkVtxBufferState> bufferStates;
+			#else
+			GLuint vertexArrayObject = GL_INVALID_INDEX;
 			#endif
 
 			void buildCommandLists();
