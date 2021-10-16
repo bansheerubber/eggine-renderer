@@ -43,11 +43,11 @@ void render::Window::initialize() {
 	this->swapchain = dk::SwapchainMaker{this->device, nwindowGetDefault(), framebufferArray}.create();
 
 	// create the memory that we'll use for the command buffer
-	this->commandBufferMemory = dk::MemBlockMaker{this->device, this->commandBufferSize}.setFlags(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached).create();
+	this->staticCommandBufferMemory = dk::MemBlockMaker{this->device, this->commandBufferSize}.setFlags(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached).create();
 
 	// create a buffer object for the command buffer
 	this->staticCommandBuffer = dk::CmdBufMaker{this->device}.create();
-	this->staticCommandBuffer.addMemory(this->commandBufferMemory, 0, this->commandBufferSize);
+	this->staticCommandBuffer.addMemory(this->staticCommandBufferMemory, 0, this->commandBufferSize);
 
 	// create command lists for our framebuffers, and also clarify them as render targets
 	for(unsigned int i = 0; i < 2; i++) {
@@ -65,6 +65,13 @@ void render::Window::initialize() {
 	this->staticCommandBuffer.bindColorWriteState(this->colorWriteState);
 	this->staticCommandList = this->staticCommandBuffer.finishList();
 
+	// create the dynamic command buffer
+	// create the memory that we'll use for the command buffer
+	this->commandBufferMemory = dk::MemBlockMaker{this->device, this->commandBufferSize}.setFlags(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached).create();
+
+	// create a buffer object for the command buffer
+	this->commandBuffer = dk::CmdBufMaker{this->device}.create();
+	this->commandBuffer.addMemory(this->commandBufferMemory, 0, this->commandBufferSize);
 	#else // else for ifdef __switch__
 	if(!glfwInit()) {
 		printf("failed to initialize glfw\n");
@@ -106,6 +113,8 @@ void render::Window::deinitialize() {
 
 	this->queue.destroy();
 	this->staticCommandBuffer.destroy();
+	this->staticCommandBufferMemory.destroy();
+	this->commandBuffer.destroy();
 	this->commandBufferMemory.destroy();
 	this->swapchain.destroy();
 	this->framebufferMemory.destroy();
@@ -124,6 +133,7 @@ void render::Window::prerender() {
 	this->lastRenderTime = getMicrosecondsNow();
 	
 	#ifdef __switch__
+	// this->commandBuffer.clear();
 	#else
 	glClearColor(this->clearColor.r, this->clearColor.g, this->clearColor.b, this->clearColor.a);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -136,6 +146,7 @@ void render::Window::render() {
 	int index = this->queue.acquireImage(this->swapchain);
 	this->queue.submitCommands(this->framebufferCommandLists[index]);
 	this->queue.submitCommands(this->staticCommandList);
+	this->queue.submitCommands(this->commandList);
 	this->queue.presentImage(this->swapchain, index);
 	#else
 	glfwSwapBuffers(this->window);

@@ -7,6 +7,7 @@
 
 #include <glm/vec4.hpp>
 
+#include "memory.h"
 #include "../util/time.h"
 
 namespace render {
@@ -22,6 +23,13 @@ namespace render {
 
 			double deltaTime = 0.0;
 
+			#ifdef __switch__
+			switch_memory::Manager memory = switch_memory::Manager(this);
+			dk::UniqueDevice device;
+			dk::CmdBuf commandBuffer;
+			DkCmdList commandList;
+			#endif
+
 		protected:
 			unsigned int width = 1280;
 			unsigned int height = 720;
@@ -32,10 +40,8 @@ namespace render {
 			
 			#ifdef __switch__
 			unsigned int nxlink = 0;
-			
 			unsigned int commandBufferSize = 16 * 1024; // 16 KB
 			
-			dk::UniqueDevice device;
 			dk::UniqueQueue queue;
 
 			dk::MemBlock framebufferMemory;
@@ -44,6 +50,8 @@ namespace render {
 			dk::Swapchain swapchain; // handles swapping the front/back buffer during the rendering process
 
 			dk::MemBlock commandBufferMemory;
+
+			dk::MemBlock staticCommandBufferMemory;
 			dk::CmdBuf staticCommandBuffer; // always inserted at the start of prerender
 			DkCmdList staticCommandList;
 
