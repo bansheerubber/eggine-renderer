@@ -57,19 +57,17 @@ int main(int argc, char* argv[]) {
 	program.addShader(&vertexShader);
 	program.addShader(&fragmentShader);
 
-	// window.memory.print();
-
 	render::VertexAttributes triangleAttributes(&window);
 	triangleAttributes.addVertexAttribute(&triangleBuffer, 0, 3, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec3), 0);
 	triangleAttributes.addVertexAttribute(&triangleColorBuffer, 1, 4, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec4), 0);
 
-	program.bind();
-	triangleAttributes.bind();
-	window.draw(render::PRIMITIVE_TRIANGLES, 0, 3, 0, 1);
-	window.commandList = window.commandBuffer.finishList();
-
 	for(unsigned int i = 0; i < 500; i++) {
 		window.prerender();
+
+		program.bind();
+		triangleAttributes.bind();
+		window.draw(render::PRIMITIVE_TRIANGLES, 0, 3, 0, 1);
+
 		window.render();
 	}
 

@@ -27,6 +27,8 @@ namespace render {
 	};
 
 	#ifdef __switch__
+	#define COMMAND_BUFFER_SLICE_COUNT 2
+
 	inline DkPrimitive primitiveToDkPrimitive(PrimitiveType type) {
 		switch(type) {
 			case PRIMITIVE_POINTS: {
@@ -162,7 +164,12 @@ namespace render {
 			
 			#ifdef __switch__
 			unsigned int nxlink = 0;
-			unsigned int commandBufferSize = 16 * 1024; // 16 KB
+			unsigned int staticCommandBufferSize = 16 * 1024; // 16 KB
+			unsigned int commandBufferSize = 1024 * 1024; // 1 MB
+			unsigned int commandBufferCount = COMMAND_BUFFER_SLICE_COUNT;
+			unsigned int commandBufferSliceSize = this->commandBufferSize / COMMAND_BUFFER_SLICE_COUNT;
+			unsigned int currentCommandBuffer = 0;
+			dk::Fence commandBufferFences[COMMAND_BUFFER_SLICE_COUNT];
 			
 			dk::UniqueQueue queue;
 
