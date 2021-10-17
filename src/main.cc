@@ -1,4 +1,6 @@
+#ifndef __switch__
 #include <glad/gl.h>
+#endif
 
 #include <array>
 #include <glm/vec3.hpp>
@@ -16,16 +18,7 @@
 #include <switch.h>
 #endif
 
-#include <string.h>
-
-struct Vertex {
-	glm::vec3 test1;
-	glm::vec3 test2;
-};
-
 int main(int argc, char* argv[]) {
-	printf("%ld\n", offsetof(Vertex, test1));
-
 	#ifdef __switch__
 	Result res = romfsInit();
 	if(R_FAILED(res)) {
@@ -45,6 +38,15 @@ int main(int argc, char* argv[]) {
 	render::VertexBuffer triangleBuffer(&window);
 	triangleBuffer.setData(triangleVertices, sizeof(triangleVertices), alignof(glm::vec3));
 
+	glm::vec4 triangleColors[] = {
+		glm::vec4(1, 0, 0, 1),
+		glm::vec4(0, 1, 0, 1),
+		glm::vec4(0, 0, 1, 1),
+	};
+
+	render::VertexBuffer triangleColorBuffer(&window);
+	triangleColorBuffer.setData(triangleColors, sizeof(triangleColors), alignof(glm::vec4));
+
 	render::Shader vertexShader(&window);
 	vertexShader.loadFromFile("romfs/basic_vsh.glsl", render::SHADER_VERTEX);
 
@@ -58,17 +60,17 @@ int main(int argc, char* argv[]) {
 	// window.memory.print();
 
 	render::VertexAttributes triangleAttributes(&window);
-	triangleAttributes.addVertexAttribute(&triangleBuffer, 0, 3, 32, 0, sizeof(glm::vec3), 0);
+	triangleAttributes.addVertexAttribute(&triangleBuffer, 0, 3, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec3), 0);
+	triangleAttributes.addVertexAttribute(&triangleColorBuffer, 1, 4, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec4), 0);
 
+	program.bind();
+	triangleAttributes.bind();
 	// window.commandBuffer.draw(DkPrimitive_Triangles, 3, 1, 0, 0);
-
 	// window.commandList = window.commandBuffer.finishList();
 
 	for(unsigned int i = 0; i < 500; i++) {
 		window.prerender();
 
-		program.bind();
-		triangleAttributes.bind();
 		glDrawArrays(GL_TRIANGLES, 0, 3);
 
 		window.render();

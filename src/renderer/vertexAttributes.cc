@@ -11,12 +11,12 @@ render::VertexAttributes::VertexAttributes(Window* window) {
 	this->window = window;
 }
 
-void render::VertexAttributes::addVertexAttribute(class VertexBuffer* buffer, unsigned short attributeLocation, unsigned short vectorLength, unsigned short dataSize, unsigned short offset, unsigned short stride, unsigned short divisor) {
+void render::VertexAttributes::addVertexAttribute(class VertexBuffer* buffer, unsigned short attributeLocation, unsigned short vectorLength, VertexAttributeType type, unsigned short offset, unsigned short stride, unsigned short divisor) {
 	this->attributes.push_back(VertexAttribute {
 		buffer: buffer,
 		attributeLocation: attributeLocation,
 		vectorLength: vectorLength,
-		dataSize: dataSize,
+		type: type,
 		offset: offset,
 		stride: stride,
 		divisor: divisor,
@@ -67,8 +67,8 @@ void render::VertexAttributes::buildCommandLists() {
 			bufferId,
 			0,
 			attribute.offset,
-			DkVtxAttribSize_3x32,
-			DkVtxAttribType_Float,
+			attributeTypeToDkAttribSize(attribute.type, attribute.vectorLength),
+			attributeTypeToDkAttribType(attribute.type),
 			0,
 		});
 	}
@@ -82,7 +82,7 @@ void render::VertexAttributes::buildCommandLists() {
 	
 	for(VertexAttribute &attribute: this->attributes) {
 		glBindBuffer(GL_ARRAY_BUFFER, attribute.buffer->bufferId);
-		glVertexAttribPointer(attribute.attributeLocation, attribute.vectorLength, GL_FLOAT, GL_FALSE, attribute.stride, 0);
+		glVertexAttribPointer(attribute.attributeLocation, attribute.vectorLength, attributeTypeToGLType(attribute.type), GL_FALSE, attribute.stride, 0);
 
 		if(attribute.divisor) {
 			glVertexAttribDivisor(attribute.attributeLocation, attribute.divisor);
