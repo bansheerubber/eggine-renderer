@@ -11,6 +11,127 @@
 #include "../util/time.h"
 
 namespace render {
+	enum PrimitiveType {
+		PRIMITIVE_POINTS,
+		PRIMITIVE_LINES,
+		PRIMITIVE_LINE_LOOP,
+		PRIMITIVE_LINE_STRIP,
+		PRIMITIVE_LINES_ADJACENCY,
+		PRIMITIVE_LINE_STRIP_ADJACENCY,
+		PRIMITIVE_TRIANGLES,
+		PRIMITIVE_TRIANGLE_STRIP,
+		PRIMITIVE_TRIANGLE_FAN,
+		PRIMITIVE_TRIANGLES_ADJACENCY,
+		PRIMITIVE_TRIANGLE_STRIP_ADJACENCY,
+		PRIMITIVE_PATCHES,
+	};
+
+	#ifdef __switch__
+	inline DkPrimitive primitiveToDkPrimitive(PrimitiveType type) {
+		switch(type) {
+			case PRIMITIVE_POINTS: {
+				return DkPrimitive_Points;
+			}
+
+			case PRIMITIVE_LINES: {
+				return DkPrimitive_Lines;
+			}
+
+			case PRIMITIVE_LINE_LOOP: {
+				return DkPrimitive_LineLoop;
+			}
+
+			case PRIMITIVE_LINE_STRIP: {
+				return DkPrimitive_LineStrip;
+			}
+
+			case PRIMITIVE_LINES_ADJACENCY: {
+				return DkPrimitive_LinesAdjacency;
+			}
+
+			case PRIMITIVE_LINE_STRIP_ADJACENCY: {
+				return DkPrimitive_LineStripAdjacency;
+			}
+
+			case PRIMITIVE_TRIANGLES: {
+				return DkPrimitive_Triangles;
+			}
+
+			case PRIMITIVE_TRIANGLE_STRIP: {
+				return DkPrimitive_TriangleStrip;
+			}
+
+			case PRIMITIVE_TRIANGLE_FAN: {
+				return DkPrimitive_TriangleFan;
+			}
+
+			case PRIMITIVE_TRIANGLES_ADJACENCY: {
+				return DkPrimitive_TrianglesAdjacency;
+			}
+
+			case PRIMITIVE_TRIANGLE_STRIP_ADJACENCY: {
+				return DkPrimitive_TriangleStripAdjacency;
+			}
+
+			case PRIMITIVE_PATCHES: {
+				return DkPrimitive_Patches;
+			}
+		}
+	}
+	#else
+	inline GLenum primitiveToGLPrimitive(PrimitiveType type) {
+		switch(type) {
+			case PRIMITIVE_POINTS: {
+				return GL_POINTS;
+			}
+
+			case PRIMITIVE_LINES: {
+				return GL_LINES;
+			}
+
+			case PRIMITIVE_LINE_LOOP: {
+				return GL_LINE_LOOP;
+			}
+
+			case PRIMITIVE_LINE_STRIP: {
+				return GL_LINE_STRIP;
+			}
+
+			case PRIMITIVE_LINES_ADJACENCY: {
+				return GL_LINES_ADJACENCY;
+			}
+
+			case PRIMITIVE_LINE_STRIP_ADJACENCY: {
+				return GL_LINE_STRIP_ADJACENCY;
+			}
+
+			case PRIMITIVE_TRIANGLES: {
+				return GL_TRIANGLES;
+			}
+
+			case PRIMITIVE_TRIANGLE_STRIP: {
+				return GL_TRIANGLE_STRIP;
+			}
+
+			case PRIMITIVE_TRIANGLE_FAN: {
+				return GL_TRIANGLE_FAN;
+			}
+
+			case PRIMITIVE_TRIANGLES_ADJACENCY: {
+				return GL_TRIANGLES_ADJACENCY;
+			}
+
+			case PRIMITIVE_TRIANGLE_STRIP_ADJACENCY: {
+				return GL_TRIANGLE_STRIP_ADJACENCY;
+			}
+
+			case PRIMITIVE_PATCHES: {
+				return GL_PATCHES;
+			}
+		}
+	}
+	#endif
+	
 	// the Window class handles our deko3d front/back buffers as well other global-ish datastructres
 	// for opengl, we just handle a GLFW window
 	class Window {
@@ -20,6 +141,7 @@ namespace render {
 			void resize(unsigned int width, unsigned int height); // resize the window
 			void prerender();
 			void render();
+			void draw(PrimitiveType type, unsigned int firstVertex, unsigned int vertexCount, unsigned int firstInstance, unsigned int instanceCount);
 
 			double deltaTime = 0.0;
 

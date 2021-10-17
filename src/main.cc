@@ -48,10 +48,10 @@ int main(int argc, char* argv[]) {
 	triangleColorBuffer.setData(triangleColors, sizeof(triangleColors), alignof(glm::vec4));
 
 	render::Shader vertexShader(&window);
-	vertexShader.loadFromFile("romfs/basic_vsh.glsl", render::SHADER_VERTEX);
+	vertexShader.loadFromFile("romfs:/basic_vsh.dksh", render::SHADER_VERTEX);
 
 	render::Shader fragmentShader(&window);
-	fragmentShader.loadFromFile("romfs/color_fsh.glsl", render::SHADER_FRAGMENT);
+	fragmentShader.loadFromFile("romfs:/color_fsh.dksh", render::SHADER_FRAGMENT);
 
 	render::Program program(&window);
 	program.addShader(&vertexShader);
@@ -65,14 +65,11 @@ int main(int argc, char* argv[]) {
 
 	program.bind();
 	triangleAttributes.bind();
-	// window.commandBuffer.draw(DkPrimitive_Triangles, 3, 1, 0, 0);
-	// window.commandList = window.commandBuffer.finishList();
+	window.draw(render::PRIMITIVE_TRIANGLES, 0, 3, 0, 1);
+	window.commandList = window.commandBuffer.finishList();
 
 	for(unsigned int i = 0; i < 500; i++) {
 		window.prerender();
-
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-
 		window.render();
 	}
 

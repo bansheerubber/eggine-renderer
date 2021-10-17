@@ -153,6 +153,14 @@ void render::Window::render() {
 	#endif
 }
 
+void render::Window::draw(PrimitiveType type, unsigned int firstVertex, unsigned int vertexCount, unsigned int firstInstance, unsigned int instanceCount) {
+	#ifdef __switch__
+	this->commandBuffer.draw(primitiveToDkPrimitive(type), vertexCount, instanceCount, firstVertex, firstInstance);
+	#else
+	glDrawArraysInstancedBaseInstance(primitiveToGLPrimitive(type), firstVertex, vertexCount, instanceCount, firstInstance);
+	#endif
+}
+
 void render::Window::resize(unsigned int width, unsigned int height) {
 	#ifndef __switch__
 	glViewport(0, 0, width, height);
