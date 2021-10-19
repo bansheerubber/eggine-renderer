@@ -28,6 +28,7 @@ namespace render {
 
 	#ifdef __switch__
 	#define COMMAND_BUFFER_SLICE_COUNT 2
+	#define IMAGE_SAMPLER_DESCRIPTOR_COUNT 32
 
 	inline DkPrimitive primitiveToDkPrimitive(PrimitiveType type) {
 		switch(type) {
@@ -133,44 +134,59 @@ namespace render {
 		}
 	}
 	#endif
-	
+
 	// the Window class handles our deko3d front/back buffers as well other global-ish datastructres
 	// for opengl, we just handle a GLFW window
 	class Window {
 		public:
+			double deltaTime = 0.0;
+			
 			void initialize(); // start the graphics
 			void deinitialize(); // end the graphics
 			void resize(unsigned int width, unsigned int height); // resize the window
 			void prerender();
 			void render();
 			void draw(PrimitiveType type, unsigned int firstVertex, unsigned int vertexCount, unsigned int firstInstance, unsigned int instanceCount);
-
-			double deltaTime = 0.0;
+			void addError();
+			unsigned int getErrorCount();
+			void clearErrors();
 
 			#ifdef __switch__
 			switch_memory::Manager memory = switch_memory::Manager(this);
 			dk::UniqueDevice device;
 			dk::CmdBuf commandBuffer;
-			DkCmdList commandList;
+
+			void addTexture(switch_memory::Piece* tempMemory, dk::ImageView view, unsigned int width, unsigned int height);
+			void bindTexture(unsigned int location, class Texture* texture);
 			#endif
 
 		protected:
+			unsigned int errorCount = 0;
 			unsigned int width = 1280;
 			unsigned int height = 720;
 
-			glm::vec4 clearColor = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+			glm::vec4 clearColor = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
 			unsigned long long lastRenderTime = getMicrosecondsNow();
 			
 			#ifdef __switch__
 			unsigned int nxlink = 0;
-			unsigned int staticCommandBufferSize = 16 * 1024; // 16 KB
+
+			switch_memory::Piece* imageDescriptorMemory;
+			switch_memory::Piece* samplerDescriptorMemory;
+			
+			dk::MemBlock commandBufferMemory;
 			unsigned int commandBufferSize = 1024 * 1024; // 1 MB
 			unsigned int commandBufferCount = COMMAND_BUFFER_SLICE_COUNT;
 			unsigned int commandBufferSliceSize = this->commandBufferSize / COMMAND_BUFFER_SLICE_COUNT;
 			unsigned int currentCommandBuffer = 0;
 			dk::Fence commandBufferFences[COMMAND_BUFFER_SLICE_COUNT];
 			
+			unsigned int staticCommandBufferSize = 16 * 1024; // 16 KB
+			dk::MemBlock staticCommandBufferMemory;
+			dk::CmdBuf staticCommandBuffer; // always inserted at the start of prerender
+			DkCmdList staticCommandList;
+
 			dk::UniqueQueue queue;
 
 			dk::MemBlock framebufferMemory;
@@ -178,11 +194,9 @@ namespace render {
 			DkCmdList framebufferCommandLists[2]; // command lists to bind front and back buffers
 			dk::Swapchain swapchain; // handles swapping the front/back buffer during the rendering process
 
-			dk::MemBlock commandBufferMemory;
-
-			dk::MemBlock staticCommandBufferMemory;
-			dk::CmdBuf staticCommandBuffer; // always inserted at the start of prerender
-			DkCmdList staticCommandList;
+			dk::MemBlock textureCommandBufferMemory;
+			dk::CmdBuf textureCommandBuffer;
+			dk::Fence textureFence;
 
 			// static data used for building static command list
 			DkViewport viewport = { 0.0f, 0.0f, (float)this->width, (float)this->height, 0.0f, 1.0f };

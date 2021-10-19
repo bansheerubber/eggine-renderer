@@ -43,8 +43,6 @@ namespace render {
 			public:
 				Page(Window* window, uint32_t flags, unsigned long size = SWITCH_MEMORY_DEFAULT_PAGE_SIZE);
 
-				unsigned int test = 8901;
-
 				dk::MemBlock block;
 				
 				Piece* allocate(unsigned long size, unsigned long align);
@@ -70,10 +68,12 @@ namespace render {
 				
 				Piece* allocate(uint32_t flags, unsigned long size, unsigned long align);
 				void print();
+				size_t getAllocated();
 			
 			protected:
 				vector<Page*> pages;
 				Window* window;
+				size_t allocated = 0;
 		};
 	};
 };

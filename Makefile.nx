@@ -11,7 +11,7 @@ LIBNX	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 SWITCH = -ffunction-sections -fno-rtti
 
 ARCH = -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft
-LIBS = -ldeko3d -ldrm_nouveau -lnx -lm
+LIBS = -ldeko3d -ldrm_nouveau -lnx -lm -lpng -lz -lbz2
 INCLUDE = -Iinclude/common -Iinclude/common/robin-map/include -Iinclude/common/fmt/include/ $(INCLUDENX)
 LIBPATHS = $(LIBNX) -Llibnx
 

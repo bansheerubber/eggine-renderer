@@ -30,6 +30,14 @@ void render::Shader::bind() {
 
 void render::Shader::loadFromFile(string filename, ShaderType type) {
 	ifstream file(filename);
+
+	if(file.bad() || file.fail()) {
+		printf("failed to open file for png %s\n", filename.c_str());
+		file.close();
+		this->window->addError();
+		return;
+  }
+
 	file.seekg(0, file.end);
 	unsigned long length = file.tellg();
 	file.seekg(0, file.beg);

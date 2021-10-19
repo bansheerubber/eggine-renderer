@@ -3,11 +3,13 @@
 #endif
 
 #include <array>
-#include <glm/vec3.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
 #include <stdio.h>
 
 #include "renderer/program.h"
 #include "renderer/shader.h"
+#include "renderer/texture.h"
 #include "renderer/vertexAttributes.h"
 #include "renderer/vertexBuffer.h"
 #include "renderer/window.h"
@@ -29,23 +31,30 @@ int main(int argc, char* argv[]) {
 	render::Window window;
 	window.initialize();
 
-	glm::vec3 triangleVertices[] = {
-		glm::vec3(0, 1, 0),
-		glm::vec3(-1, -1, 0),
-		glm::vec3(1, -1, 0),
+	glm::vec2 triangleVertices[] = {
+		glm::vec2(-0.5, 1.0),
+		glm::vec2(-0.5, -1.0),
+		glm::vec2(0.5, 1.0),
+		glm::vec2(0.5, -1.0),
 	};
 
 	render::VertexBuffer triangleBuffer(&window);
-	triangleBuffer.setData(triangleVertices, sizeof(triangleVertices), alignof(glm::vec3));
+	triangleBuffer.setData(triangleVertices, sizeof(triangleVertices), alignof(glm::vec2));
 
-	glm::vec4 triangleColors[] = {
-		glm::vec4(1, 0, 0, 1),
-		glm::vec4(0, 1, 0, 1),
-		glm::vec4(0, 0, 1, 1),
+	glm::vec2 triangleUVs[] = {
+		glm::vec2(0.0, 0.0),
+		glm::vec2(0.0, 1.0),
+		glm::vec2(1.0, 0.0),
+		glm::vec2(1.0, 1.0),
 	};
 
 	render::VertexBuffer triangleColorBuffer(&window);
-	triangleColorBuffer.setData(triangleColors, sizeof(triangleColors), alignof(glm::vec4));
+	triangleColorBuffer.setData(triangleUVs, sizeof(triangleUVs), alignof(glm::vec2));
+
+	render::Texture texture(&window);
+	texture.setWrap(render::TEXTURE_WRAP_CLAMP_TO_BORDER, render::TEXTURE_WRAP_CLAMP_TO_BORDER);
+	texture.setFilters(render::TEXTURE_FILTER_NEAREST, render::TEXTURE_FILTER_NEAREST);
+	texture.loadPNGFromFile("romfs:/spritesheet.png");
 
 	render::Shader vertexShader(&window);
 	vertexShader.loadFromFile("romfs:/basic_vsh.dksh", render::SHADER_VERTEX);
@@ -58,17 +67,24 @@ int main(int argc, char* argv[]) {
 	program.addShader(&fragmentShader);
 
 	render::VertexAttributes triangleAttributes(&window);
-	triangleAttributes.addVertexAttribute(&triangleBuffer, 0, 3, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec3), 0);
-	triangleAttributes.addVertexAttribute(&triangleColorBuffer, 1, 4, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec4), 0);
+	triangleAttributes.addVertexAttribute(&triangleBuffer, 0, 2, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec2), 0);
+	triangleAttributes.addVertexAttribute(&triangleColorBuffer, 1, 2, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec2), 0);
 
-	for(unsigned int i = 0; i < 500; i++) {
-		window.prerender();
+	#ifdef __switch__
+	printf("%ld bytes allocated\n", window.memory.getAllocated());
+	#endif
 
-		program.bind();
-		triangleAttributes.bind();
-		window.draw(render::PRIMITIVE_TRIANGLES, 0, 3, 0, 1);
+	if(!window.getErrorCount()) {
+		for(unsigned int i = 0; i < 500; i++) {
+			window.prerender();
 
-		window.render();
+			program.bind();
+			texture.bind(0);
+			triangleAttributes.bind();
+			window.draw(render::PRIMITIVE_TRIANGLE_STRIP, 0, 4, 0, 1);
+
+			window.render();
+		}
 	}
 
 	#ifdef __switch__

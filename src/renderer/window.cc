@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "../util/align.h"
+#include "texture.h"
 #include "window.h"
 
 // opengl: initialize GLFW, glEnables, etc
@@ -28,7 +30,7 @@ void render::Window::initialize() {
 
 	uint32_t framebufferSize  = framebufferLayout.getSize();
 	uint32_t framebufferAlign = framebufferLayout.getAlignment();
-	framebufferSize = (framebufferSize + framebufferAlign - 1) & ~(framebufferAlign - 1);
+	framebufferSize = alignTo(framebufferSize, framebufferAlign);
 
 	// create the framebuffer's memory blocks from calculated size
 	this->framebufferMemory = dk::MemBlockMaker{this->device, 2 * framebufferSize}.setFlags(DkMemBlockFlags_GpuCached | DkMemBlockFlags_Image).create();
@@ -72,6 +74,16 @@ void render::Window::initialize() {
 	// create a buffer object for the command buffer
 	this->commandBuffer = dk::CmdBufMaker{this->device}.create();
 	this->commandBuffer.addMemory(this->commandBufferMemory, this->commandBufferSliceSize * this->currentCommandBuffer, this->commandBufferSliceSize);
+
+	// create a buffer object for the texture command buffer
+	this->textureCommandBufferMemory = dk::MemBlockMaker{this->device, 4 * 1024}.setFlags(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached).create();
+	this->textureCommandBuffer = dk::CmdBufMaker{this->device}.create();
+	this->textureCommandBuffer.addMemory(this->textureCommandBufferMemory, 0, 4 * 1024);
+
+	// create image/sampler descriptor memory
+	this->imageDescriptorMemory = this->memory.allocate(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached, sizeof(DkImageDescriptor) * IMAGE_SAMPLER_DESCRIPTOR_COUNT, DK_IMAGE_DESCRIPTOR_ALIGNMENT);
+
+	this->samplerDescriptorMemory = this->memory.allocate(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached, sizeof(DkSamplerDescriptor) * IMAGE_SAMPLER_DESCRIPTOR_COUNT, DK_SAMPLER_DESCRIPTOR_ALIGNMENT);
 	#else // else for ifdef __switch__
 	if(!glfwInit()) {
 		printf("failed to initialize glfw\n");
@@ -105,6 +117,18 @@ void render::Window::initialize() {
 	*/
 
 	#endif // end for ifdef __switch__
+}
+
+void render::Window::addError() {
+	this->errorCount++;
+}
+
+unsigned int render::Window::getErrorCount() {
+	return this->errorCount;
+}
+
+void render::Window::clearErrors() {
+	this->errorCount = 0;
 }
 
 void render::Window::deinitialize() {
@@ -175,3 +199,23 @@ void render::Window::resize(unsigned int width, unsigned int height) {
 	glViewport(0, 0, width, height);
 	#endif
 }
+
+#ifdef __switch__
+void render::Window::addTexture(switch_memory::Piece* tempMemory, dk::ImageView view, unsigned int width, unsigned int height) {
+	this->textureCommandBuffer.clear();
+	this->textureFence.wait();
+	this->textureCommandBuffer.addMemory(this->textureCommandBufferMemory, 0, 4 * 1024);
+
+	this->textureCommandBuffer.signalFence(this->textureFence);
+	this->textureCommandBuffer.copyBufferToImage({ tempMemory->gpuAddr() }, view, { 0, 0, 0, width, height, 1 });
+	this->queue.submitCommands(this->textureCommandBuffer.finishList());
+}
+
+void render::Window::bindTexture(unsigned int location, Texture* texture) {
+	this->commandBuffer.pushData(this->imageDescriptorMemory->gpuAddr() + location * sizeof(DkImageDescriptor), &texture->imageDescriptor, sizeof(DkImageDescriptor));
+	this->commandBuffer.pushData(this->samplerDescriptorMemory->gpuAddr() + location * sizeof(DkSamplerDescriptor), &texture->samplerDescriptor, sizeof(DkSamplerDescriptor));
+
+	this->commandBuffer.bindImageDescriptorSet(this->imageDescriptorMemory->gpuAddr(), IMAGE_SAMPLER_DESCRIPTOR_COUNT);
+	this->commandBuffer.bindSamplerDescriptorSet(this->samplerDescriptorMemory->gpuAddr(), IMAGE_SAMPLER_DESCRIPTOR_COUNT);
+}
+#endif
