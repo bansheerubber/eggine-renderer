@@ -57,11 +57,37 @@ void render::Program::bind() {
 			this->program = program;
 		}
 
+		int uniformCount = 0;
 		for(Shader* shader: this->shaders) {
 			glDetachShader(program, shader->shader);
+
+			// handle uniform block bindings (reconcile differences between deko3d and opengl)
+			for(auto &[uniform, binding]: shader->uniformToBinding) {
+				// update shader binding for opengl
+				GLuint blockIndex = glGetUniformBlockIndex(this->program, uniform.c_str());
+				if(blockIndex != GL_INVALID_INDEX) {
+					glUniformBlockBinding(this->program, blockIndex, binding + uniformCount);
+				}
+			}
+			uniformCount += shader->uniformToBinding.size();
 		}
 	}
 
 	glUseProgram(this->program);
+	#endif
+}
+
+void render::Program::bindUniform(string uniformName, void* data) {
+	#ifdef __switch__
+	#else
+	#endif
+}
+
+void render::Program::bindTexture(string uniformName, unsigned int texture) {
+	#ifdef __switch__
+	#else
+	// get the location of the uniform we're going to bind to
+	GLuint location = glGetUniformLocation(this->program, uniformName.c_str());
+	glUniform1i(location, texture);
 	#endif
 }

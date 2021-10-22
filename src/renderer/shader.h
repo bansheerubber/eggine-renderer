@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 #endif
 
+#include <tsl/robin_map.h>
 #include <string>
 
 #include "memory.h"
@@ -31,11 +32,15 @@ namespace render {
 		protected:
 			class Window* window;
 
+			tsl::robin_map<string, unsigned int> uniformToBinding;
+
 			#ifdef __switch__
 			switch_memory::Piece* memory = nullptr;
 			dk::Shader shader;
 			#else
 			GLuint shader = GL_INVALID_INDEX;
 			#endif
+
+			void processUniforms(string filename);
 	};
 };

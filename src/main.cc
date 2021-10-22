@@ -27,6 +27,11 @@ int main(int argc, char* argv[]) {
 		return 0;
 	}
 	#endif
+
+	string filePrefix = "romfs/";
+	#ifdef __switch__
+	filePrefix = "romfs:/";
+	#endif
 	
 	render::Window window;
 	window.initialize();
@@ -54,13 +59,13 @@ int main(int argc, char* argv[]) {
 	render::Texture texture(&window);
 	texture.setWrap(render::TEXTURE_WRAP_CLAMP_TO_BORDER, render::TEXTURE_WRAP_CLAMP_TO_BORDER);
 	texture.setFilters(render::TEXTURE_FILTER_NEAREST, render::TEXTURE_FILTER_NEAREST);
-	texture.loadPNGFromFile("romfs:/spritesheet.png");
+	texture.loadPNGFromFile(filePrefix + "spritesheet.png");
 
 	render::Shader vertexShader(&window);
-	vertexShader.loadFromFile("romfs:/basic_vsh.dksh", render::SHADER_VERTEX);
+	vertexShader.loadFromFile(filePrefix + "basic.vert", render::SHADER_VERTEX);
 
 	render::Shader fragmentShader(&window);
-	fragmentShader.loadFromFile("romfs:/color_fsh.dksh", render::SHADER_FRAGMENT);
+	fragmentShader.loadFromFile(filePrefix + "color.frag", render::SHADER_FRAGMENT);
 
 	render::Program program(&window);
 	program.addShader(&vertexShader);
@@ -80,6 +85,7 @@ int main(int argc, char* argv[]) {
 
 			program.bind();
 			texture.bind(0);
+			program.bindTexture("inTexture", 0);
 			triangleAttributes.bind();
 			window.draw(render::PRIMITIVE_TRIANGLE_STRIP, 0, 4, 0, 1);
 

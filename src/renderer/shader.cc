@@ -29,6 +29,12 @@ void render::Shader::bind() {
 }
 
 void render::Shader::loadFromFile(string filename, ShaderType type) {
+	this->processUniforms(filename);
+	
+	#ifdef __switch__
+	filename += ".dksh";
+	#endif
+	
 	ifstream file(filename);
 
 	if(file.bad() || file.fail()) {
@@ -113,4 +119,69 @@ void render::Shader::load(char* buffer, size_t length, ShaderType type) {
 		this->shader = shader;
 	}
 	#endif
+}
+
+// find the uniforms and identify them so we can do some stuff magically
+void render::Shader::processUniforms(string filename) {
+	ifstream file(filename);
+	if(file.bad() || file.fail()) {
+		file.close();
+		return;
+	}
+
+	string line;
+	while(getline(file, line)) {
+		size_t uniformLocation = line.find("uniform");
+		if(uniformLocation != string::npos) {
+			size_t bindingLocation = line.find("binding");
+			if(bindingLocation == string::npos) {
+				printf("could not find binding for uniform\n");
+				file.close();
+				return;
+			}
+
+			string buffer;
+			for(unsigned int i = bindingLocation; i < line.length(); i++) {
+				switch(line[i]) {
+					case '0':
+					case '1':
+					case '2':
+					case '3':
+					case '4':
+					case '5':
+					case '6':
+					case '7':
+					case '8':
+					case '9': {
+						buffer += line[i];
+						break;
+					}
+
+					case ',':
+					case ')': {
+						goto end;
+					}
+				}
+			}
+			
+			end:
+			unsigned int binding = stod(buffer);
+			buffer = "";
+			for(unsigned int i = uniformLocation + string("uniform ").length(); i < line.length(); i++) {
+				if(line[i] == ' ') {
+					buffer = "";
+				}
+				else if(
+					(line[i] >= 'a' && line[i] <= 'z')
+					|| (line[i] >= 'A' && line[i] <= 'Z')
+					|| (line[i] >= '0' && line[i] <= '9')
+					|| line[i] == '_'
+				) {
+					buffer += line[i];
+				}
+			}
+			this->uniformToBinding[buffer] = binding;
+		}
+	}
+	file.close();
 }

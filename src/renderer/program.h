@@ -5,6 +5,7 @@
 #endif
 
 #include <array>
+#include <tsl/robin_map.h>
 #include <vector>
 
 using namespace std;
@@ -15,6 +16,8 @@ namespace render {
 			Program(class Window* window);
 			void bind();
 			void addShader(class Shader* shader);
+			void bindUniform(string uniformName, void* data);
+			void bindTexture(string uniformName, unsigned int texture);
 		
 		protected:
 			vector<class Shader*> shaders;
