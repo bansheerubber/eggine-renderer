@@ -156,7 +156,7 @@ namespace render {
 			dk::UniqueDevice device;
 			dk::CmdBuf commandBuffer;
 
-			void addTexture(switch_memory::Piece* tempMemory, dk::ImageView view, unsigned int width, unsigned int height);
+			void addTexture(switch_memory::Piece* tempMemory, dk::ImageView& view, unsigned int width, unsigned int height);
 			void bindTexture(unsigned int location, class Texture* texture);
 			#endif
 

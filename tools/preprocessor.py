@@ -185,3 +185,10 @@ if __name__ == "__main__":
 	for depth in range(1, max_depth + 1):
 		for file in files_with_custom_depth:
 			handle_file(file, depth)
+	
+	for root, subdirs, files in os.walk("./dist/romfs"):
+		for file in files:
+			regex = re.compile("(vert$)|(frag$)")
+			if regex.findall(file):
+				stage = "vert" if ".vert" in file else "frag"
+				os.system(f"uam {root}/{file} -s {stage} -o {root}/{file}.dksh")

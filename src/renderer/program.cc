@@ -23,6 +23,12 @@ void render::Program::bind() {
 	}
 	
 	dkCmdBufBindShaders(this->window->commandBuffer, DkStageFlag_GraphicsMask, shaders.data(), shaders.size());
+
+	for(Shader* shader: this->shaders) {
+		for(auto &[uniform, binding]: shader->uniformToBinding) {
+			this->uniformToBinding[uniform] = binding;
+		}
+	}
 	#else
 	if(this->program == GL_INVALID_INDEX) {
 		GLuint program = glCreateProgram();
@@ -67,6 +73,7 @@ void render::Program::bind() {
 				GLuint blockIndex = glGetUniformBlockIndex(this->program, uniform.c_str());
 				if(blockIndex != GL_INVALID_INDEX) {
 					glUniformBlockBinding(this->program, blockIndex, binding + uniformCount);
+					this->uniformToBinding[uniform] = binding + uniformCount;
 				}
 			}
 			uniformCount += shader->uniformToBinding.size();
@@ -77,17 +84,36 @@ void render::Program::bind() {
 	#endif
 }
 
-void render::Program::bindUniform(string uniformName, void* data) {
+void render::Program::bindUniform(string uniformName, void* data, unsigned int size) {
 	#ifdef __switch__
 	#else
+	if(this->uniformToBuffer.find(uniformName) == this->uniformToBuffer.end()) {
+		this->createUniformBuffer(uniformName, size);
+	}
+
+	glBindBuffer(GL_UNIFORM_BUFFER, this->uniformToBuffer[uniformName]);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, size, data);
+	glBindBufferBase(GL_UNIFORM_BUFFER, this->uniformToBinding[uniformName], this->uniformToBuffer[uniformName]);
 	#endif
 }
 
 void render::Program::bindTexture(string uniformName, unsigned int texture) {
 	#ifdef __switch__
+	this->window->commandBuffer.bindTextures(DkStage_Fragment, 0, dkMakeTextureHandle(0, 0));
 	#else
 	// get the location of the uniform we're going to bind to
 	GLuint location = glGetUniformLocation(this->program, uniformName.c_str());
 	glUniform1i(location, texture);
 	#endif
 }
+
+#ifndef __switch__
+void render::Program::createUniformBuffer(string uniformName, unsigned int size) {
+	GLuint bufferId;
+	glGenBuffers(1, &bufferId);
+	this->uniformToBuffer[uniformName] = bufferId;
+
+	glBindBuffer(GL_UNIFORM_BUFFER, this->uniformToBuffer[uniformName]);
+	glBufferData(GL_UNIFORM_BUFFER, size, NULL, GL_DYNAMIC_DRAW);
+}
+#endif

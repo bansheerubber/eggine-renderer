@@ -201,7 +201,7 @@ void render::Window::resize(unsigned int width, unsigned int height) {
 }
 
 #ifdef __switch__
-void render::Window::addTexture(switch_memory::Piece* tempMemory, dk::ImageView view, unsigned int width, unsigned int height) {
+void render::Window::addTexture(switch_memory::Piece* tempMemory, dk::ImageView& view, unsigned int width, unsigned int height) {
 	this->textureCommandBuffer.clear();
 	this->textureFence.wait();
 	this->textureCommandBuffer.addMemory(this->textureCommandBufferMemory, 0, 4 * 1024);
@@ -209,6 +209,7 @@ void render::Window::addTexture(switch_memory::Piece* tempMemory, dk::ImageView 
 	this->textureCommandBuffer.signalFence(this->textureFence);
 	this->textureCommandBuffer.copyBufferToImage({ tempMemory->gpuAddr() }, view, { 0, 0, 0, width, height, 1 });
 	this->queue.submitCommands(this->textureCommandBuffer.finishList());
+	this->textureCommandBuffer.clear();
 }
 
 void render::Window::bindTexture(unsigned int location, Texture* texture) {
