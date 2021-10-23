@@ -170,7 +170,7 @@ void render::Texture::load() {
 	dk::ImageLayout layout;
 	dk::ImageLayoutMaker{this->window->device}
 		.setFlags(0)
-		.setFormat(DkImageFormat_RGBA8_Uint)
+		.setFormat(DkImageFormat_RGBA8_Unorm)
 		.setDimensions(this->width, this->height)
 		.initialize(layout);
 

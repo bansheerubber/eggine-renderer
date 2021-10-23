@@ -14,8 +14,6 @@
 #include "renderer/vertexBuffer.h"
 #include "renderer/window.h"
 
-#include "util/align.h"
-
 #include "renderer/memory.h"
 
 #ifdef __switch__
