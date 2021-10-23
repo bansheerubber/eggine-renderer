@@ -14,11 +14,17 @@
 #include "renderer/vertexBuffer.h"
 #include "renderer/window.h"
 
+#include "util/align.h"
+
 #include "renderer/memory.h"
 
 #ifdef __switch__
 #include <switch.h>
 #endif
+
+struct TestUniformBlock {
+	glm::vec4 color;
+};
 
 int main(int argc, char* argv[]) {
 	#ifdef __switch__
@@ -79,6 +85,10 @@ int main(int argc, char* argv[]) {
 	printf("%ld bytes allocated\n", window.memory.getAllocated());
 	#endif
 
+	TestUniformBlock block = {
+		color: glm::vec4(1, 0, 0, 1),
+	};
+
 	if(!window.getErrorCount()) {
 		for(unsigned int i = 0; i < 500; i++) {
 			window.prerender();
@@ -87,6 +97,11 @@ int main(int argc, char* argv[]) {
 			texture.bind(0);
 			program.bindTexture("inTexture", 0);
 			triangleAttributes.bind();
+
+			block.color.r = abs(cos((double)i / 10));
+
+			program.bindUniform("fragment", &block, sizeof(block));
+
 			window.draw(render::PRIMITIVE_TRIANGLE_STRIP, 0, 4, 0, 1);
 
 			window.render();

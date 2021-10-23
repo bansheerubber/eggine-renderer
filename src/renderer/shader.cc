@@ -57,6 +57,7 @@ void render::Shader::loadFromFile(string filename, ShaderType type) {
 }
 
 void render::Shader::load(char* buffer, size_t length, ShaderType type) {
+	this->type = type;
 	#ifdef __switch__
 	DkshHeader header {
 		magic: 0,

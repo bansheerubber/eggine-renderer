@@ -8,6 +8,8 @@
 #include <tsl/robin_map.h>
 #include <vector>
 
+#include "memory.h"
+
 using namespace std;
 
 namespace render {
@@ -25,10 +27,12 @@ namespace render {
 
 			tsl::robin_map<string, unsigned int> uniformToBinding;
 
-			#ifndef __switch__
+			#ifdef __switch__
+			tsl::robin_map<string, switch_memory::Piece*> uniformToPiece;
+			void createUniformMemory(string uniformName, unsigned int size);
+			#else
 			GLuint program = GL_INVALID_INDEX;
 			tsl::robin_map<string, GLuint> uniformToBuffer;
-
 			void createUniformBuffer(string uniformName, unsigned int size);
 			#endif
 	};

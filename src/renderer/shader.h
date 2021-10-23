@@ -33,6 +33,7 @@ namespace render {
 			class Window* window;
 
 			tsl::robin_map<string, unsigned int> uniformToBinding;
+			ShaderType type;
 
 			#ifdef __switch__
 			switch_memory::Piece* memory = nullptr;

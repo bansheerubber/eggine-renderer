@@ -70,7 +70,10 @@ render::switch_memory::Piece* render::switch_memory::Page::allocate(unsigned lon
 	// look through the pieces and see if there's a piece that is big enough to hold our memory
 	Piece* current = this->head;
 	while(current != nullptr) {
-		if(current->size() >= realSize && !current->allocated) { // we found a piece that we can use
+		unsigned long realStart = alignTo(current->start, align); // we need to align the start
+		long pieceSize = (long)current->size() - (long)(realStart - current->start); // calculate useable size using alignment
+
+		if(pieceSize >= (long)realSize && !current->allocated) { // we found a piece that we can use
 			break;
 		}
 		
@@ -81,12 +84,32 @@ render::switch_memory::Piece* render::switch_memory::Page::allocate(unsigned lon
 		return nullptr;
 	}
 	else if(realSize != this->size) { // segment memory if needed
+		unsigned long realStart = alignTo(current->start, align); // round up to closest alignment
+
 		Piece* unusedSegment = new Piece(this);
-		unusedSegment->start = current->start + realSize;
+		unusedSegment->start = realStart + realSize;
 		unusedSegment->end = current->end;
 
+		// add the unused alignment before the current element
+		if(realStart != current->start) {
+			Piece* unusedSegmentAlign = new Piece(this);
+			unusedSegmentAlign->start = current->start;
+			unusedSegmentAlign->end = current->start + (realStart - current->start - 1);
+			unusedSegmentAlign->allocated = false;
+			Piece* prev = current->prev;
+			if(prev != nullptr) {
+				prev->next = unusedSegmentAlign;
+			}
+
+			unusedSegmentAlign->prev = prev;
+			unusedSegmentAlign->next = current;
+
+			current->prev = unusedSegmentAlign;
+		}
+
 		// adjust current's size
-		current->end = current->start + realSize - 1;
+		current->start = realStart;
+		current->end = realStart + realSize - 1;
 		current->allocated = true;
 
 		// update the linked list

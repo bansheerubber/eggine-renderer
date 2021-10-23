@@ -86,6 +86,30 @@ void render::Program::bind() {
 
 void render::Program::bindUniform(string uniformName, void* data, unsigned int size) {
 	#ifdef __switch__
+	if(this->uniformToPiece.find(uniformName) == this->uniformToPiece.end()) {
+		this->createUniformMemory(uniformName, size);
+	}
+
+	this->window->commandBuffer.pushConstants(
+		this->uniformToPiece[uniformName]->gpuAddr(),
+		this->uniformToPiece[uniformName]->size(),
+		0,
+		size,
+		data
+	);
+
+	// look for binding
+	for(Shader* shader: this->shaders) {
+		if(shader->uniformToBinding.find(uniformName) != shader->uniformToBinding.end()) {
+			this->window->commandBuffer.bindUniformBuffer(
+				shader->type == SHADER_FRAGMENT ? DkStage_Fragment : DkStage_Vertex,
+				shader->uniformToBinding[uniformName],
+				this->uniformToPiece[uniformName]->gpuAddr(),
+				this->uniformToPiece[uniformName]->size()
+			);
+			break;
+		}
+	}
 	#else
 	if(this->uniformToBuffer.find(uniformName) == this->uniformToBuffer.end()) {
 		this->createUniformBuffer(uniformName, size);
@@ -107,7 +131,13 @@ void render::Program::bindTexture(string uniformName, unsigned int texture) {
 	#endif
 }
 
-#ifndef __switch__
+#ifdef __switch__
+void render::Program::createUniformMemory(string uniformName, unsigned int size) {
+	this->uniformToPiece[uniformName] = this->window->memory.allocate(
+		DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached, size, DK_UNIFORM_BUF_ALIGNMENT
+	);
+}
+#else
 void render::Program::createUniformBuffer(string uniformName, unsigned int size) {
 	GLuint bufferId;
 	glGenBuffers(1, &bufferId);
