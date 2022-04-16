@@ -27,7 +27,7 @@ void render::State::reset() {
 }
 
 void render::State::bindPipeline() {
-	if(this->window->backend != VULKAN_BACKEND) {
+	if(this->window->backend != VULKAN_BACKEND || this->window->swapchainOutOfDate) {
 		return;
 	}
 
@@ -37,7 +37,7 @@ void render::State::bindPipeline() {
 			exit(1);
 		}
 		
-		render::VulkanPipeline pipeline = { this->window, this->current.primitive, 1280.f, 720.f, this->current.program };
+		render::VulkanPipeline pipeline = { this->window, this->current.primitive, (float)this->window->width, (float)this->window->height, this->current.program };
 		if(this->window->pipelineCache.find(pipeline) == this->window->pipelineCache.end()) {
 			this->window->pipelineCache[pipeline] = pipeline.newPipeline(); // TODO move this creation step to the window class??
 		}
@@ -56,7 +56,7 @@ void render::State::draw(PrimitiveType type, unsigned int firstVertex, unsigned 
 	if(this->window->backend == OPENGL_BACKEND) {
 		glDrawArraysInstancedBaseInstance(primitiveToGLPrimitive(type), firstVertex, vertexCount, instanceCount, firstInstance);
 	}
-	else {
+	else if(!this->window->swapchainOutOfDate) {
 		this->buffer[this->window->framePingPong].draw(vertexCount, instanceCount, firstVertex, firstInstance);
 	}
 }

@@ -201,8 +201,11 @@ namespace render {
 			vk::Semaphore isImageAvailable[2];
 			vk::Semaphore isRenderFinished[2];
 
+			bool swapchainOutOfDate = false;
+
 			void pickDevice();
 			void setupDevice();
+			void createSwapchain();
 			#endif
 	};
 };

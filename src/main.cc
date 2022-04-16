@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
 	render::State state = window.getState(0);
 
 	if(!window.getErrorCount()) {
-		for(unsigned int i = 0; i < 600; i++) {
+		for(unsigned int i = 0; i < 100000; i++) {
 			window.prerender();
 			state.bindProgram(simpleProgram);
 			state.draw(render::PRIMITIVE_TRIANGLE_STRIP, 0, 3, 0, 1);
