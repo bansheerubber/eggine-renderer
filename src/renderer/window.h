@@ -24,6 +24,7 @@
 #include "pipeline.h"
 #include "../util/png.h"
 #include "primitive.h"
+#include "state.h"
 #include "texture.h"
 #include "../util/time.h"
 
@@ -64,6 +65,7 @@ namespace render {
 		// TODO re-enable in eggine repo
 		// friend LiteHTMLContainer;
 		friend class Shader;
+		friend class Program;
 		friend VulkanPipeline;
 		
 		public:
@@ -82,18 +84,12 @@ namespace render {
 			void resize(unsigned int width, unsigned int height); // resize the window
 			void prerender();
 			void render();
-			void draw(PrimitiveType type, unsigned int firstVertex, unsigned int vertexCount, unsigned int firstInstance, unsigned int instanceCount);
 			void addError();
 			unsigned int getErrorCount();
 			void clearErrors();
 			void registerHTMLUpdate();
 
-			void setStencilFunction(StencilFunction func, unsigned int reference, unsigned int mask);
-			void setStencilMask(unsigned int mask);
-			void setStencilOperation(StencilOperation stencilFail, StencilOperation depthFail, StencilOperation pass);
-			void enableStencilTest(bool enable);
-
-			void enableDepthTest(bool enable);
+			State &getState(uint32_t id); // get a render state, potentially allocate a new one
 
 			#ifdef __switch__
 			switch_memory::Manager memory = switch_memory::Manager(this);
@@ -137,7 +133,9 @@ namespace render {
 			// litehtml::context htmlContext;
 			uint64_t htmlChecksum = 0;
 			uint64_t lastHTMLChecksum = 0;
-			
+
+			std::vector<class Program*> programs;
+
 			#ifdef __switch__
 			switch_memory::Piece* imageDescriptorMemory;
 			switch_memory::Piece* samplerDescriptorMemory;
@@ -176,6 +174,8 @@ namespace render {
 
 			PadState pad;
 			#else
+			tsl::robin_map<uint32_t, State> renderStates;
+			
 			vk::Instance instance;
 			vk::SurfaceKHR surface;
 			vk::Queue graphicsQueue;
@@ -195,14 +195,11 @@ namespace render {
 			tsl::robin_map<VulkanPipeline, VulkanPipelineResult> pipelineCache;
 
 			vk::CommandPool commandPool;
-			vk::CommandBuffer mainBuffer;
 
 			vk::Fence frameFence;
 			vk::Semaphore isImageAvailable;
 			vk::Semaphore isRenderFinished;
 
-			Program* simpleProgram = nullptr;
-			
 			void pickDevice();
 			void setupDevice();
 			#endif

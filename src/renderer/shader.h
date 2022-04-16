@@ -21,6 +21,7 @@ namespace render {
 
 	class Shader {
 		friend class Program;
+		friend class Window;
 		
 		public:
 			Shader(class Window* window);

@@ -14,6 +14,7 @@ unsigned int render::Program::UniformCount = 0;
 
 render::Program::Program(Window* window) {
 	this->window = window;
+	this->window->programs.push_back(this);
 }
 
 void render::Program::addShader(Shader* shader) {
@@ -29,21 +30,7 @@ void render::Program::addShader(Shader* shader) {
 	}
 }
 
-void render::Program::bind() {
-	#ifdef __switch__
-	vector<DkShader const*> shaders;
-	for(Shader* shader: this->shaders) {
-		shaders.push_back(&shader->shader);
-	}
-	
-	dkCmdBufBindShaders(this->window->commandBuffer, DkStageFlag_GraphicsMask, shaders.data(), shaders.size());
-
-	for(Shader* shader: this->shaders) {
-		for(auto &[uniform, binding]: shader->uniformToBinding) {
-			this->uniformToBinding[uniform] = binding;
-		}
-	}
-	#else
+void render::Program::compile() {
 	if(this->window->backend == OPENGL_BACKEND) {
 		if(this->program == GL_INVALID_INDEX) {
 			GLuint program = glCreateProgram();
@@ -51,7 +38,7 @@ void render::Program::bind() {
 			for(Shader* shader: this->shaders) {
 				if(shader->shader == GL_INVALID_INDEX) {
 					console::error("shaders not compiled\n");
-					return;
+					exit(1);
 				}
 
 				glAttachShader(program, shader->shader);
@@ -73,6 +60,8 @@ void render::Program::bind() {
 				console::error("failed to link program:\n%.*s\n", logLength, log);
 
 				this->program = GL_INVALID_INDEX - 1;
+
+				exit(1);
 			}
 			else {
 				this->program = program;
@@ -93,7 +82,26 @@ void render::Program::bind() {
 				UniformCount += shader->uniformToBinding.size();
 			}
 		}
+	}
+}
 
+void render::Program::bind() {
+	#ifdef __switch__
+	vector<DkShader const*> shaders;
+	for(Shader* shader: this->shaders) {
+		shaders.push_back(&shader->shader);
+	}
+	
+	dkCmdBufBindShaders(this->window->commandBuffer, DkStageFlag_GraphicsMask, shaders.data(), shaders.size());
+
+	for(Shader* shader: this->shaders) {
+		for(auto &[uniform, binding]: shader->uniformToBinding) {
+			this->uniformToBinding[uniform] = binding;
+		}
+	}
+	#else
+	if(this->window->backend == OPENGL_BACKEND) {
+		this->compile();
 		glUseProgram(this->program);
 	}
 	#endif

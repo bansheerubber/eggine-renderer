@@ -1,5 +1,13 @@
 #pragma once
 
+#ifdef __switch__
+#include <deko3d.hpp>
+#include <switch.h>
+#else
+#include <GLFW/glfw3.h>
+#include <vulkan/vulkan.hpp>
+#endif
+
 namespace render {
 	enum StencilFunction {
 		STENCIL_NEVER,

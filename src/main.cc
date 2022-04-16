@@ -58,17 +58,13 @@ int main(int argc, char* argv[]) {
 	simpleProgram->addShader(vertexShader);
 	simpleProgram->addShader(fragmentShader);
 
-	// pipeline
-	render::VulkanPipeline pipeline = { &window, render::PRIMITIVE_TRIANGLE_STRIP, 1280.f, 720.f, simpleProgram };
-	window.pipelineCache[pipeline] = pipeline.newPipeline();
+	render::State state = window.getState(0);
 
 	if(!window.getErrorCount()) {
-		for(unsigned int i = 0; i < 500; i++) {
+		for(unsigned int i = 0; i < 600; i++) {
 			window.prerender();
-
-			window.mainBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *window.pipelineCache[pipeline].pipeline);
-			window.mainBuffer.draw(3, 1, 0, 0);
-			
+			state.bindProgram(simpleProgram);
+			state.draw(render::PRIMITIVE_TRIANGLE_STRIP, 0, 3, 0, 1);
 			window.render();
 		}
 	}
