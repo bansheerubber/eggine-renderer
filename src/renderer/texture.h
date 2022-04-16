@@ -7,10 +7,13 @@
 #include <GLFW/glfw3.h>
 #endif
 
+#include <fstream>
 #include <png.h>
 #include <string>
 
-using namespace std;
+#include "../engine/console.h"
+
+class DeveloperGui;
 
 namespace render {
 	enum TextureFilter {
@@ -29,8 +32,83 @@ namespace render {
 	};
 
 	#ifdef __switch__
+	inline DkImageFormat channelsAndBitDepthToDkFormat(unsigned int channels, unsigned int bitDepth) {
+		switch(bitDepth) {
+			case 8: {
+				switch(channels) {
+					case 1: {
+						return DkImageFormat_R8_Unorm;
+					}
+
+					case 2: {
+						return DkImageFormat_RG8_Unorm;
+					}
+
+					case 3: {
+						console::error("error: deko3d does not support %u channels and %u bitdepth", channels, bitDepth);
+						exit(1);
+					}
+
+					case 4: {
+						return DkImageFormat_RGBA8_Unorm;
+					}
+				}
+			}
+
+			case 16: {
+				switch(channels) {
+					case 1: {
+						return DkImageFormat_R16_Unorm;
+					}
+
+					case 2: {
+						return DkImageFormat_RG16_Unorm;
+					}
+
+					case 3: {
+						console::error("error: deko3d does not support %u channels and %u bitdepth", channels, bitDepth);
+						exit(1);
+					}
+
+					case 4: {
+						return DkImageFormat_RGBA16_Unorm;
+					}
+				}
+			}
+
+			case 32: {
+				switch(channels) {
+					case 1: {
+						console::error("error: deko3d does not support %u channels and %u bitdepth", channels, bitDepth);
+						exit(1);
+					}
+
+					case 2: {
+						console::error("error: deko3d does not support %u channels and %u bitdepth", channels, bitDepth);
+						exit(1);
+					}
+
+					case 3: {
+						console::error("error: deko3d does not support %u channels and %u bitdepth", channels, bitDepth);
+						exit(1);
+					}
+
+					case 4: {
+						console::error("error: deko3d does not support %u channels and %u bitdepth", channels, bitDepth);
+						exit(1);
+					}
+				}
+			}
+
+			default: {
+				return DkImageFormat_None;
+			}
+		}
+	}
+	
 	inline DkFilter textureFilterToDkFilter(TextureFilter type) {
 		switch(type) {
+			default:
 			case TEXTURE_FILTER_NEAREST: {
 				return DkFilter_Nearest;
 			}
@@ -43,6 +121,7 @@ namespace render {
 
 	inline DkWrapMode textureWrapToDkWrap(TextureWrap wrap) {
 		switch(wrap) {
+			default:
 			case TEXTURE_WRAP_REPEAT: {
 				return DkWrapMode_Repeat;
 			}
@@ -65,6 +144,50 @@ namespace render {
 		}
 	}
 	#else
+	inline GLenum channelsToGLFormat(unsigned int channels) {
+		switch(channels) {
+			case 1: {
+				return GL_RED;
+			}
+
+			case 2: {
+				return GL_RG;
+			}
+
+			case 3: {
+				return GL_RGB;
+			}
+
+			case 4: {
+				return GL_RGBA;
+			}
+
+			default: {
+				return GL_INVALID_ENUM;
+			}
+		}
+	}
+
+	inline GLenum bitDepthToGLFormat(unsigned int bitDepth) {
+		switch(bitDepth) {
+			case 8: {
+				return GL_UNSIGNED_BYTE;
+			}
+
+			case 16: {
+				return GL_UNSIGNED_SHORT;
+			}
+
+			case 32: {
+				return GL_UNSIGNED_INT;
+			}
+			
+			default: {
+				return GL_INVALID_ENUM;
+			}
+		}
+	}
+
 	inline GLenum textureFilterToGLFilter(TextureFilter type) {
 		switch(type) {
 			case TEXTURE_FILTER_NEAREST: {
@@ -73,6 +196,10 @@ namespace render {
 
 			case TEXTURE_FILTER_LINEAR: {
 				return GL_LINEAR;
+			}
+
+			default: {
+				return GL_INVALID_ENUM;
 			}
 		}
 	}
@@ -98,11 +225,16 @@ namespace render {
 			case TEXTURE_WRAP_MIRROR_CLAMP_TO_EDGE: {
 				return GL_MIRROR_CLAMP_TO_EDGE;
 			}
+
+			default: {
+				return GL_INVALID_ENUM;
+			}
 		}
 	}
 	#endif
 	
 	class Texture {
+		friend DeveloperGui;
 		friend class Window;
 		
 		public:
@@ -111,19 +243,28 @@ namespace render {
 			void setFilters(TextureFilter minFilter, TextureFilter magFilter);
 			void setWrap(TextureWrap uWrap, TextureWrap vWrap);
 
-			void loadPNGFromFile(string filename);
+			void loadPNGFromFile(std::string filename);
 			void loadPNG(const unsigned char* buffer, unsigned int size);
 			void bind(unsigned int location);
+			void load(
+				const unsigned char* buffer,
+				unsigned int bufferSize,
+				unsigned int width,
+				unsigned int height,
+				unsigned int bitDepth,
+				unsigned int channels
+			);
+
+			unsigned int getWidth();
+			unsigned int getHeight();
 		
 		protected:
 			Window* window;
 
-			png_uint_32 width;
-			png_uint_32 height;
-			png_byte bytesPerPixel;
-			png_byte colorType;
-			png_byte bitDepth;
-			png_byte* imageData;
+			unsigned int width;
+			unsigned int height;
+			unsigned int bitDepth;
+			unsigned int channels = 1;
 
 			TextureFilter minFilter;
 			TextureFilter magFilter;
@@ -136,12 +277,11 @@ namespace render {
 			dk::Sampler sampler;
 			dk::SamplerDescriptor samplerDescriptor;
 			switch_memory::Piece* memory;
+
+			switch_memory::Piece* imageDescriptorMemory;
+			switch_memory::Piece* samplerDescriptorMemory;
 			#else
 			GLuint texture = GL_INVALID_INDEX;
-			GLenum getFormat();
-			GLenum getType();
 			#endif
-
-			void load(); // load into GL/deko3d structure
 	};
 };

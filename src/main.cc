@@ -16,6 +16,8 @@
 
 #include "renderer/memory.h"
 
+#include "resources/getShaderSource.h"
+
 #ifdef __switch__
 #include <switch.h>
 #endif
@@ -32,7 +34,7 @@ int main(int argc, char* argv[]) {
 	}
 	#endif
 
-	string filePrefix = "romfs/";
+	std::string filePrefix = "romfs/";
 	#ifdef __switch__
 	filePrefix = "romfs:/";
 	#endif
@@ -66,10 +68,10 @@ int main(int argc, char* argv[]) {
 	texture.loadPNGFromFile(filePrefix + "spritesheet.png");
 
 	render::Shader vertexShader(&window);
-	vertexShader.loadFromFile(filePrefix + "basic.vert", render::SHADER_VERTEX);
+	vertexShader.load(getShaderSource(&window, filePrefix + "basic.vert"), render::SHADER_VERTEX);
 
 	render::Shader fragmentShader(&window);
-	fragmentShader.loadFromFile(filePrefix + "color.frag", render::SHADER_FRAGMENT);
+	fragmentShader.load(getShaderSource(&window, filePrefix + "color.frag"), render::SHADER_FRAGMENT);
 
 	render::Program program(&window);
 	program.addShader(&vertexShader);

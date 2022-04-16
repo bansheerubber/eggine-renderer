@@ -4,6 +4,7 @@
 #include <glad/gl.h>
 #endif
 
+#include "../util/align.h"
 #include "vertexBuffer.h"
 #include "window.h"
 
@@ -15,17 +16,29 @@ render::VertexBuffer::~VertexBuffer() {
 	this->destroyBuffer();
 }
 
+void render::VertexBuffer::setDynamicDraw(bool isDynamicDraw) {
+	#ifndef __switch__
+	this->usage = isDynamicDraw ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW;
+	#endif
+}
+
 void render::VertexBuffer::setData(void* data, unsigned int size, unsigned int align) {
 	this->size = size;
 	
 	#ifdef __switch__
 	this->align = align;
 	
-	if(!this->memoryAllocated) {
+	if(!this->memoryAllocated || alignTo(size, align) != this->memory->size()) {
+		if(this->memory != nullptr) {
+			this->memory->deallocate(); // deallocate memory
+		}
+		
 		this->memory = this->window->memory.allocate(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached, this->size, align);
 	}
 
-	memcpy(this->memory->cpuAddr(), data, this->size);
+	if(data != nullptr) {
+		memcpy(this->memory->cpuAddr(), data, this->size);
+	}
 	this->memoryAllocated = true;
 	#else
 	if(this->bufferId == GL_INVALID_INDEX) {

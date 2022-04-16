@@ -7,6 +7,7 @@
 #include <fstream>
 #include <string.h>
 
+#include "../engine/console.h"
 #include "window.h"
 
 #ifdef __switch__
@@ -28,37 +29,25 @@ void render::Shader::bind() {
 	
 }
 
-void render::Shader::loadFromFile(string filename, ShaderType type) {
-	this->processUniforms(filename);
-	
-	#ifdef __switch__
-	filename += ".dksh";
-	#endif
-	
-	ifstream file(filename);
-
-	if(file.bad() || file.fail()) {
-		printf("failed to open file for png %s\n", filename.c_str());
-		file.close();
-		this->window->addError();
+void render::Shader::load(resources::ShaderSource* source, ShaderType type) {
+	if(source == nullptr) {
+		console::error("shader source is nullptr\n");
 		return;
-  }
+	}
 
-	file.seekg(0, file.end);
-	unsigned long length = file.tellg();
-	file.seekg(0, file.beg);
-	char* buffer = new char[length];
-	file.read((char*)buffer, length);
-	file.close();
-
-	this->load(buffer, length, type);
-
-	delete[] buffer;
-}
-
-void render::Shader::load(char* buffer, size_t length, ShaderType type) {
 	this->type = type;
+
+	if(source->original != nullptr) {
+		this->processUniforms((const char*)source->original->buffer, source->original->bufferSize);	
+	}
+	else {
+		this->processUniforms((const char*)source->buffer, source->bufferSize);
+	}
+	
 	#ifdef __switch__
+	const char* buffer = (const char*)source->buffer;
+	uint64_t length = source->bufferSize;
+
 	DkshHeader header {
 		magic: 0,
 		headerSize: 0,
@@ -70,7 +59,7 @@ void render::Shader::load(char* buffer, size_t length, ShaderType type) {
 	memcpy(&header, buffer, sizeof(header));
 
 	if(header.magic != 0x48534b44) {
-		printf("couldn't load dksh\n");
+		console::error("couldn't load dksh\n");
 		return;
 	}
 
@@ -85,63 +74,79 @@ void render::Shader::load(char* buffer, size_t length, ShaderType type) {
 
 	memcpy(this->memory->cpuAddr(), &buffer[header.controlSize], header.codeSize); // read code straight into code memory
 
-	dk::ShaderMaker{this->memory->parent->block, this->memory->start}
+	dk::ShaderMaker{this->memory->parent->block, (uint32_t)this->memory->start}
 		.setControl(controlBuffer.data())
 		.setProgramId(0)
 		.initialize(this->shader);
 	
 	if(!this->shader.isValid()) {
-		printf("shader not valid\n");
+		console::error("shader not valid\n");
 		exit(1);
 	}
 	#else
-	GLenum glType = type == SHADER_FRAGMENT ? GL_FRAGMENT_SHADER : GL_VERTEX_SHADER;
-	
-	GLuint shader = glCreateShader(glType);
-	int glLength = length;
-	glShaderSource(shader, 1, &buffer, &glLength);
-	glCompileShader(shader);
+	const char* buffer = (const char*)source->buffer;
+	uint64_t length = source->bufferSize;
 
-	GLint compiled = 0;
-	glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-	if(compiled == GL_FALSE) {
-		// print the error log
-		GLint logLength = 0;
-		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
+	if(this->window->backend == OPENGL_BACKEND) {
+		GLenum glType = type == SHADER_FRAGMENT ? GL_FRAGMENT_SHADER : GL_VERTEX_SHADER;
 
-		GLchar* log = new GLchar[logLength];
-		glGetShaderInfoLog(shader, logLength, &logLength, log);
+		GLuint shader = glCreateShader(glType);
+		int glLength = length;
+		glShaderSource(shader, 1, &buffer, &glLength);
+		glCompileShader(shader);
 
-		glDeleteShader(shader);
+		GLint compiled = 0;
+		glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+		if(compiled == GL_FALSE) {
+			// print the error log
+			GLint logLength = 0;
+			glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
 
-		printf("failed to compile shader:\n%.*s\n", logLength, log);
+			GLchar* log = new GLchar[logLength];
+			glGetShaderInfoLog(shader, logLength, &logLength, log);
+
+			glDeleteShader(shader);
+
+			console::error("failed to compile shader:\n%.*s\n", logLength, log);
+		}
+		else {
+			this->shader = shader;
+		}
 	}
 	else {
-		this->shader = shader;
+		std::vector<char> data;
+		for(uint64_t i = 0; i < length; i++) {
+			data.push_back(buffer[i]);
+		}
+		vk::ShaderModuleCreateInfo createInfo(
+			{}, data.size(), reinterpret_cast<const uint32_t*>(data.data())
+		);
+
+		this->module = this->window->device.device.createShaderModule(createInfo, nullptr);
 	}
 	#endif
 }
 
-// find the uniforms and identify them so we can do some stuff magically
-void render::Shader::processUniforms(string filename) {
-	ifstream file(filename);
-	if(file.bad() || file.fail()) {
-		file.close();
-		return;
-	}
+void render::Shader::processUniforms(const char* buffer, uint64_t bufferSize) {
+	std::string line;
+	uint64_t index = 0;
+	while(index < bufferSize) {
+		// read a line
+		line = "";
+		for(; buffer[index] != '\n' && index < bufferSize; index++) {
+			line += buffer[index];
+		}
+		index++; // skip the newline
 
-	string line;
-	while(getline(file, line)) {
-		size_t uniformLocation = line.find("uniform");
-		if(uniformLocation != string::npos) {
-			size_t bindingLocation = line.find("binding");
-			if(bindingLocation == string::npos) {
-				printf("could not find binding for uniform\n");
-				file.close();
+		uint64_t uniformLocation = line.find("uniform");
+		if(uniformLocation != std::string::npos) {
+			uint64_t bindingLocation = line.find("binding");
+			if(bindingLocation == std::string::npos) {
+				console::error("could not find binding for uniform\n");
 				return;
 			}
 
-			string buffer;
+			std::string buffer;
 			for(unsigned int i = bindingLocation; i < line.length(); i++) {
 				switch(line[i]) {
 					case '0':
@@ -166,9 +171,9 @@ void render::Shader::processUniforms(string filename) {
 			}
 			
 			end:
-			unsigned int binding = stod(buffer);
+			unsigned int binding = std::stod(buffer);
 			buffer = "";
-			for(unsigned int i = uniformLocation + string("uniform ").length(); i < line.length(); i++) {
+			for(unsigned int i = uniformLocation + std::string("uniform ").length(); i < line.length(); i++) {
 				if(line[i] == ' ') {
 					buffer = "";
 				}
@@ -184,5 +189,4 @@ void render::Shader::processUniforms(string filename) {
 			this->uniformToBinding[buffer] = binding;
 		}
 	}
-	file.close();
 }

@@ -5,8 +5,6 @@
 #include <stdio.h>
 #include <vector>
 
-using namespace std;
-
 namespace render {
 	class Window;
 	
@@ -20,14 +18,16 @@ namespace render {
 			public:
 				Piece(class Page* parent);
 				
-				unsigned long start; // start of the chunk relative to the memory block
-				unsigned long end; // end of the chunk relative to the memory block
+				uint64_t start; // start of the chunk relative to the memory block
+				uint64_t end; // end of the chunk relative to the memory block
+				uint64_t align;
 				Page* parent = nullptr;
 
 				void print();
-				unsigned long size();
+				uint64_t size();
 				void* cpuAddr();
 				DkGpuAddr gpuAddr();
+				void requestDeallocate();
 				void deallocate();
 
 			protected:
@@ -39,13 +39,15 @@ namespace render {
 		// structure to handle a MemBlock and split it up into usable pieces for data
 		class Page {
 			friend class Manager;
+			friend Piece;
 			
 			public:
-				Page(Window* window, uint32_t flags, unsigned long size = SWITCH_MEMORY_DEFAULT_PAGE_SIZE);
+				Page(Window* window, uint32_t flags, uint64_t size = SWITCH_MEMORY_DEFAULT_PAGE_SIZE);
 
 				dk::MemBlock block;
 				
-				Piece* allocate(unsigned long size, unsigned long align);
+				Piece* allocate(uint64_t size, uint64_t align);
+				void processDeallocationList();
 				void deallocate(Piece* piece);
 				void print();
 
@@ -55,8 +57,9 @@ namespace render {
 			protected:
 				Window* window;
 				Piece* head = nullptr;
-				unsigned long size;
+				uint64_t size;
 				uint32_t flags;
+				std::vector<Piece*> deallocationList;
 
 				void combinePieces();
 		};
@@ -66,14 +69,15 @@ namespace render {
 			public:
 				Manager(Window* window);
 				
-				Piece* allocate(uint32_t flags, unsigned long size, unsigned long align);
+				Piece* allocate(uint32_t flags, uint64_t size, uint64_t align);
+				void processDeallocationLists();
 				void print();
-				size_t getAllocated();
+				uint64_t getAllocated();
 			
 			protected:
-				vector<Page*> pages;
+				std::vector<Page*> pages;
 				Window* window;
-				size_t allocated = 0;
+				uint64_t allocated = 0;
 		};
 	};
 };

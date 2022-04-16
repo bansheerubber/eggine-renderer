@@ -35,8 +35,10 @@ void render::VertexAttributes::bind() {
 	this->window->commandBuffer.bindVtxAttribState(dk::detail::ArrayProxy(this->attributeStates.size(), (const DkVtxAttribState*)this->attributeStates.data()));
 	this->window->commandBuffer.bindVtxBufferState(dk::detail::ArrayProxy(this->bufferStates.size(), (const DkVtxBufferState*)this->bufferStates.data()));
 	#else
-	this->buildCommandLists();
-	glBindVertexArray(this->vertexArrayObject);
+	if(this->window->backend == OPENGL_BACKEND) {
+		this->buildCommandLists();
+		glBindVertexArray(this->vertexArrayObject);
+	}
 	#endif
 }
 
@@ -73,24 +75,31 @@ void render::VertexAttributes::buildCommandLists() {
 		});
 	}
 	#else
-	if(this->vertexArrayObject != GL_INVALID_INDEX) {
-		return;
-	}
-
-	glGenVertexArrays(1, &this->vertexArrayObject);
-	glBindVertexArray(this->vertexArrayObject);
-	
-	for(VertexAttribute &attribute: this->attributes) {
-		glBindBuffer(GL_ARRAY_BUFFER, attribute.buffer->bufferId);
-		glVertexAttribPointer(attribute.attributeLocation, attribute.vectorLength, attributeTypeToGLType(attribute.type), GL_FALSE, attribute.stride, 0);
-
-		if(attribute.divisor) {
-			glVertexAttribDivisor(attribute.attributeLocation, attribute.divisor);
+	if(this->window->backend == OPENGL_BACKEND) {
+		if(this->vertexArrayObject != GL_INVALID_INDEX) {
+			return;
 		}
 
-		glEnableVertexAttribArray(attribute.attributeLocation);
-	}
+		glGenVertexArrays(1, &this->vertexArrayObject);
+		glBindVertexArray(this->vertexArrayObject);
+		
+		for(VertexAttribute &attribute: this->attributes) {
+			glBindBuffer(GL_ARRAY_BUFFER, attribute.buffer->bufferId);
+			if(attribute.type == VERTEX_ATTRIB_HALF_FLOAT || attribute.type == VERTEX_ATTRIB_FLOAT || attribute.type == VERTEX_ATTRIB_DOUBLE) {
+				glVertexAttribPointer(attribute.attributeLocation, attribute.vectorLength, attributeTypeToGLType(attribute.type), GL_FALSE, attribute.stride, 0);
+			}
+			else {
+				glVertexAttribIPointer(attribute.attributeLocation, attribute.vectorLength, attributeTypeToGLType(attribute.type), attribute.stride, 0);
+			}
 
-	glBindVertexArray(0);
+			if(attribute.divisor) {
+				glVertexAttribDivisor(attribute.attributeLocation, attribute.divisor);
+			}
+
+			glEnableVertexAttribArray(attribute.attributeLocation);
+		}
+
+		glBindVertexArray(0);
+	}
 	#endif
 }

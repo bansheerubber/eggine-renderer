@@ -18,6 +18,7 @@ namespace render {
 			VertexBuffer(class Window* window);
 			~VertexBuffer();
 			
+			void setDynamicDraw(bool isDynamicDraw);
 			void setData(void* data, unsigned int size, unsigned int align);
 
 			void createBuffer(); // create a normal buffer
