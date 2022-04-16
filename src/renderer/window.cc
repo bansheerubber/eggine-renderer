@@ -273,17 +273,22 @@ void render::Window::initializeVulkan() {
 	vk::CommandPoolCreateInfo commandPoolInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, this->device.graphicsQueueIndex);
 	this->commandPool = this->device.device.createCommandPool(commandPoolInfo); 
 
-	vk::CommandBufferAllocateInfo commandBufferInfo(this->commandPool, vk::CommandBufferLevel::ePrimary, 1);
+	vk::CommandBufferAllocateInfo commandBufferInfo(this->commandPool, vk::CommandBufferLevel::ePrimary, 2);
 	this->renderStates[0] = State(this);
-	this->renderStates[0].buffer = this->device.device.allocateCommandBuffers(commandBufferInfo)[0];
+	result = this->device.device.allocateCommandBuffers(&commandBufferInfo, this->renderStates[0].buffer);
+	if(result != vk::Result::eSuccess) {
+		console::error("vulkan: could not create command buffers: %s\n", vkResultToString((VkResult)result).c_str());
+		exit(1);
+	}
 
 	// create fences/semaphores
 	vk::FenceCreateInfo fenceInfo(vk::FenceCreateFlagBits::eSignaled);
-	this->frameFence = this->device.device.createFence(fenceInfo);
-
 	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
-	this->isImageAvailable = this->device.device.createSemaphore(semaphoreInfo);
-	this->isRenderFinished = this->device.device.createSemaphore(semaphoreInfo);
+	for(uint8_t i = 0; i < 2; i++) {
+		this->frameFence[i] = this->device.device.createFence(fenceInfo);
+		this->isImageAvailable[i] = this->device.device.createSemaphore(semaphoreInfo);
+		this->isRenderFinished[i] = this->device.device.createSemaphore(semaphoreInfo);
+	}
 
 	// handle renderpass creation
 	vk::AttachmentDescription colorAttachment(
@@ -387,9 +392,11 @@ void render::Window::deinitialize() {
 			this->device.device.destroyImageView(renderImageView);
 		}
 
-		this->device.device.destroySemaphore(this->isRenderFinished);
-		this->device.device.destroySemaphore(this->isImageAvailable);
-		this->device.device.destroyFence(this->frameFence);
+		for(uint8_t i = 0; i < 2; i++) {
+			this->device.device.destroySemaphore(this->isRenderFinished[i]);
+			this->device.device.destroySemaphore(this->isImageAvailable[i]);
+			this->device.device.destroyFence(this->frameFence[i]);
+		}
 
 		this->device.device.destroyCommandPool(this->commandPool);
 
@@ -429,21 +436,23 @@ void render::Window::prerender() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	}
 	else {
+		console::print("%d\n", this->framePingPong);
+		
 		// wait for the last fence to finish
-		vk::Result result = this->device.device.waitForFences(1, &this->frameFence, true, UINT64_MAX);
-		result = this->device.device.resetFences(1, &this->frameFence);
+		vk::Result result = this->device.device.waitForFences(1, &this->frameFence[this->framePingPong], true, UINT64_MAX);
+		result = this->device.device.resetFences(1, &this->frameFence[this->framePingPong]);
 		if(result != vk::Result::eSuccess) {
 			console::print("vulkan: failed to reset frame fence %s\n", vkResultToString((VkResult)result).c_str());
 			exit(1);
 		}
 
 		// acquire the next image, signalling using the isImageAvailable semaphore
-		this->currentFramebuffer = this->device.device.acquireNextImageKHR(this->swapchain, UINT64_MAX, this->isImageAvailable).value;
+		this->currentFramebuffer = this->device.device.acquireNextImageKHR(this->swapchain, UINT64_MAX, this->isImageAvailable[this->framePingPong]).value;
 		
 		// prepare the primary command buffer
 		vk::CommandBufferBeginInfo bufferBeginInfo({}, nullptr);
 		this->renderStates[0].reset();
-		this->renderStates[0].buffer.begin(bufferBeginInfo);
+		this->renderStates[0].buffer[this->framePingPong].begin(bufferBeginInfo);
 
 		// only do one render pass for now
 		vk::ClearValue clearColor(
@@ -451,7 +460,7 @@ void render::Window::prerender() {
 		); // ????
 		vk::RenderPassBeginInfo renderPassInfo(this->renderPass, this->framebuffers[this->currentFramebuffer], { { 0, 0 }, this->swapchainExtent }, 1, &clearColor);
 
-		this->renderStates[0].buffer.beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
+		this->renderStates[0].buffer[this->framePingPong].beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
 	}
 	glfwPollEvents();
 	this->hasGamepad = glfwGetGamepadState(GLFW_JOYSTICK_1, &this->gamepad);
@@ -496,16 +505,16 @@ void render::Window::render() {
 	}
 	else {
 		// finalize render pass
-		this->renderStates[0].buffer.endRenderPass();
-		this->renderStates[0].buffer.end();
+		this->renderStates[0].buffer[this->framePingPong].endRenderPass();
+		this->renderStates[0].buffer[this->framePingPong].end();
 
 		// submit the image for presentation
-		vk::Semaphore waitSemaphores[] = { this->isImageAvailable };
-		vk::Semaphore signalSemaphores[] = { this->isRenderFinished };
+		vk::Semaphore waitSemaphores[] = { this->isImageAvailable[this->framePingPong] };
+		vk::Semaphore signalSemaphores[] = { this->isRenderFinished[this->framePingPong] };
 		vk::PipelineStageFlags waitStages[] = { vk::PipelineStageFlagBits::eColorAttachmentOutput };
-		vk::SubmitInfo submitInfo(1, waitSemaphores, waitStages, 1, &this->renderStates[0].buffer, 1, signalSemaphores);
+		vk::SubmitInfo submitInfo(1, waitSemaphores, waitStages, 1, &this->renderStates[0].buffer[this->framePingPong], 1, signalSemaphores);
 
-		vk::Result result = this->graphicsQueue.submit(1, &submitInfo, this->frameFence);
+		vk::Result result = this->graphicsQueue.submit(1, &submitInfo, this->frameFence[this->framePingPong]);
 		if(result != vk::Result::eSuccess) {
 			console::print("vulkan: failed to submit graphics queue %s\n", vkResultToString((VkResult)result).c_str());
 			exit(1);
@@ -518,6 +527,8 @@ void render::Window::render() {
 			console::print("vulkan: failed to present via presentation queue %s\n", vkResultToString((VkResult)result).c_str());
 			exit(1);
 		}
+
+		this->framePingPong = (this->framePingPong + 1) % 2;
 	}
 	#endif
 }

@@ -23,7 +23,7 @@ void render::State::reset() {
 		return;
 	}
 
-	this->buffer.reset();
+	this->buffer[this->window->framePingPong].reset();
 }
 
 void render::State::bindPipeline() {
@@ -42,7 +42,7 @@ void render::State::bindPipeline() {
 			this->window->pipelineCache[pipeline] = pipeline.newPipeline(); // TODO move this creation step to the window class??
 		}
 
-		this->buffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *this->window->pipelineCache[pipeline].pipeline);
+		this->buffer[this->window->framePingPong].bindPipeline(vk::PipelineBindPoint::eGraphics, *this->window->pipelineCache[pipeline].pipeline);
 
 		this->old = this->current;
 	}
@@ -57,7 +57,7 @@ void render::State::draw(PrimitiveType type, unsigned int firstVertex, unsigned 
 		glDrawArraysInstancedBaseInstance(primitiveToGLPrimitive(type), firstVertex, vertexCount, instanceCount, firstInstance);
 	}
 	else {
-		this->buffer.draw(vertexCount, instanceCount, firstVertex, firstInstance);
+		this->buffer[this->window->framePingPong].draw(vertexCount, instanceCount, firstVertex, firstInstance);
 	}
 }
 

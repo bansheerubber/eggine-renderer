@@ -188,6 +188,7 @@ namespace render {
 			vk::RenderPass renderPass;
 			std::vector<vk::Framebuffer> framebuffers;
 			uint32_t currentFramebuffer;
+			uint32_t framePingPong = 0;
 
 			std::vector<vk::Image> renderImages;
 			std::vector<vk::ImageView> renderImageViews;
@@ -196,9 +197,9 @@ namespace render {
 
 			vk::CommandPool commandPool;
 
-			vk::Fence frameFence;
-			vk::Semaphore isImageAvailable;
-			vk::Semaphore isRenderFinished;
+			vk::Fence frameFence[2];
+			vk::Semaphore isImageAvailable[2];
+			vk::Semaphore isRenderFinished[2];
 
 			void pickDevice();
 			void setupDevice();

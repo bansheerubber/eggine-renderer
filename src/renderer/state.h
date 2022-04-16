@@ -74,7 +74,7 @@ namespace render {
 		private:
 			class Window* window = nullptr;
 
-			vk::CommandBuffer buffer;
+			vk::CommandBuffer buffer[2];
 			
 			SubState current;
 			SubState old;
