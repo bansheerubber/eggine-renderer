@@ -42,68 +42,33 @@ int main(int argc, char* argv[]) {
 	render::Window window;
 	window.initialize();
 
-	glm::vec2 triangleVertices[] = {
-		glm::vec2(-0.5, 1.0),
-		glm::vec2(-0.5, -1.0),
-		glm::vec2(0.5, 1.0),
-		glm::vec2(0.5, -1.0),
-	};
-
-	render::VertexBuffer triangleBuffer(&window);
-	triangleBuffer.setData(triangleVertices, sizeof(triangleVertices), alignof(glm::vec2));
-
-	glm::vec2 triangleUVs[] = {
-		glm::vec2(0.0, 0.0),
-		glm::vec2(0.0, 1.0),
-		glm::vec2(1.0, 0.0),
-		glm::vec2(1.0, 1.0),
-	};
-
-	render::VertexBuffer triangleColorBuffer(&window);
-	triangleColorBuffer.setData(triangleUVs, sizeof(triangleUVs), alignof(glm::vec2));
-
-	render::Texture texture(&window);
-	texture.setWrap(render::TEXTURE_WRAP_CLAMP_TO_BORDER, render::TEXTURE_WRAP_CLAMP_TO_BORDER);
-	texture.setFilters(render::TEXTURE_FILTER_NEAREST, render::TEXTURE_FILTER_NEAREST);
-	texture.loadPNGFromFile(filePrefix + "spritesheet.png");
-
-	render::Shader vertexShader(&window);
-	vertexShader.load(getShaderSource(&window, filePrefix + "basic.vert"), render::SHADER_VERTEX);
-
-	render::Shader fragmentShader(&window);
-	fragmentShader.load(getShaderSource(&window, filePrefix + "color.frag"), render::SHADER_FRAGMENT);
-
-	render::Program program(&window);
-	program.addShader(&vertexShader);
-	program.addShader(&fragmentShader);
-
-	render::VertexAttributes triangleAttributes(&window);
-	triangleAttributes.addVertexAttribute(&triangleBuffer, 0, 2, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec2), 0);
-	triangleAttributes.addVertexAttribute(&triangleColorBuffer, 1, 2, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec2), 0);
-
 	#ifdef __switch__
 	printf("%ld bytes allocated\n", window.memory.getAllocated());
 	#endif
 
-	TestUniformBlock block = {
-		color: glm::vec4(1, 0, 0, 1),
-	};
+	// shaders
+	render::Shader* vertexShader = new render::Shader(&window);
+	vertexShader->load(getShaderSource(&window, filePrefix + "hello.vert"), render::SHADER_VERTEX);
+
+	render::Shader* fragmentShader = new render::Shader(&window);
+	fragmentShader->load(getShaderSource(&window, filePrefix + "hello.frag"), render::SHADER_FRAGMENT);
+
+	// programs
+	render::Program* simpleProgram = new render::Program(&window);
+	simpleProgram->addShader(vertexShader);
+	simpleProgram->addShader(fragmentShader);
+
+	// pipeline
+	render::VulkanPipeline pipeline = { &window, render::PRIMITIVE_TRIANGLE_STRIP, 1280.f, 720.f, simpleProgram };
+	window.pipelineCache[pipeline] = pipeline.newPipeline();
 
 	if(!window.getErrorCount()) {
 		for(unsigned int i = 0; i < 500; i++) {
 			window.prerender();
 
-			program.bind();
-			texture.bind(0);
-			program.bindTexture("inTexture", 0);
-			triangleAttributes.bind();
-
-			block.color.r = abs(cos((double)i / 10));
-
-			program.bindUniform("fragment", &block, sizeof(block));
-
-			window.draw(render::PRIMITIVE_TRIANGLE_STRIP, 0, 4, 0, 1);
-
+			window.mainBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *window.pipelineCache[pipeline].pipeline);
+			window.mainBuffer.draw(3, 1, 0, 0);
+			
 			window.render();
 		}
 	}

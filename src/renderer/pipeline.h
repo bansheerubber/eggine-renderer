@@ -14,9 +14,7 @@
 namespace render {
 	struct VulkanPipelineResult {
 		vk::PipelineLayout* layout;
-		vk::RenderPass* renderPass;
 		vk::Pipeline* pipeline;
-		std::vector<vk::Framebuffer*> framebuffers;
 	};
 	
 	struct VulkanPipeline { // used for caching a vk pipeline based on commonly used parameters

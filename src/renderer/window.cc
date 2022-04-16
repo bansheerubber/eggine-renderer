@@ -34,87 +34,7 @@
 // deko3d: create framebuffers/swapchains, command buffers
 void render::Window::initialize() {
 	#ifdef __switch__ // start of switch code (based on switch-examples/graphics/deko3d/deko_basic)
-	this->device = dk::DeviceMaker{}.create();
-	this->queue = dk::QueueMaker{this->device}.setFlags(DkQueueFlags_Graphics).create();
-
-	// start the construction of our framebuffers
-	dk::ImageLayout framebufferLayout;
-	dk::ImageLayoutMaker{this->device}
-		.setFlags(DkImageFlags_UsageRender | DkImageFlags_UsagePresent | DkImageFlags_HwCompression)
-		.setFormat(DkImageFormat_RGBA8_Unorm)
-		.setDimensions(this->width, this->height)
-		.initialize(framebufferLayout); // helper data structure for framebuffer creation
-
-	uint32_t framebufferSize  = framebufferLayout.getSize();
-	uint32_t framebufferAlign = framebufferLayout.getAlignment();
-	framebufferSize = alignTo(framebufferSize, framebufferAlign);
-
-	// create the framebuffer's memory blocks from calculated size
-	this->framebufferMemory = dk::MemBlockMaker{this->device, 2 * framebufferSize}.setFlags(DkMemBlockFlags_GpuCached | DkMemBlockFlags_Image).create();
-
-	// create images for framebuffers
-	for(unsigned int i = 0; i < 2; i++) {
-		this->framebuffers[i].initialize(framebufferLayout, this->framebufferMemory, i * framebufferSize);
-	}
-
-	// create the swapchain using the framebuffers
-	std::array<DkImage const*, 2> framebufferArray = { &this->framebuffers[0], &this->framebuffers[1] };
-	this->swapchain = dk::SwapchainMaker{this->device, nwindowGetDefault(), framebufferArray}.create();
-
-	// create the memory that we'll use for the command buffer
-	this->staticCommandBufferMemory = dk::MemBlockMaker{this->device, this->staticCommandBufferSize}.setFlags(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached).create();
-
-	// create a buffer object for the command buffer
-	this->staticCommandBuffer = dk::CmdBufMaker{this->device}.create();
-	this->staticCommandBuffer.addMemory(this->staticCommandBufferMemory, 0, this->staticCommandBufferSize);
-
-	// create command lists for our framebuffers, and also clarify them as render targets
-	for(unsigned int i = 0; i < 2; i++) {
-		dk::ImageView renderTarget { this->framebuffers[i] };
-		this->staticCommandBuffer.bindRenderTargets(&renderTarget);
-		this->framebufferCommandLists[i] = this->staticCommandBuffer.finishList();
-	}
-
-	this->blendState.setSrcColorBlendFactor(DkBlendFactor_SrcAlpha);
-	this->blendState.setDstColorBlendFactor(DkBlendFactor_InvSrcAlpha);
-	this->blendState.setSrcAlphaBlendFactor(DkBlendFactor_SrcAlpha);
-	this->blendState.setDstAlphaBlendFactor(DkBlendFactor_InvSrcAlpha);
-
-	this->colorState.setBlendEnable(0, true);
-
-	this->rasterizerState.setCullMode(DkFace_None);
-
-	// tell the switch that its time to disco
-	this->staticCommandBuffer.setViewports(0, { this->viewport });
-	this->staticCommandBuffer.setScissors(0, { this->scissor });
-	this->staticCommandBuffer.clearColor(0, DkColorMask_RGBA, this->clearColor.r, this->clearColor.g, this->clearColor.b, this->clearColor.a);
-	this->staticCommandBuffer.bindRasterizerState(this->rasterizerState);
-	this->staticCommandBuffer.bindColorState(this->colorState);
-	this->staticCommandBuffer.bindColorWriteState(this->colorWriteState);
-	this->staticCommandBuffer.bindBlendStates(0, this->blendState);
-	this->staticCommandList = this->staticCommandBuffer.finishList();
-
-	// create the dynamic command buffer
-	// create the memory that we'll use for the command buffer
-	this->commandBufferMemory = dk::MemBlockMaker{this->device, this->commandBufferSize}.setFlags(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached).create();
-
-	// create a buffer object for the command buffer
-	this->commandBuffer = dk::CmdBufMaker{this->device}.create();
-	this->commandBuffer.addMemory(this->commandBufferMemory, this->commandBufferSliceSize * this->currentCommandBuffer, this->commandBufferSliceSize);
-
-	// create a buffer object for the texture command buffer
-	this->textureCommandBufferMemory = dk::MemBlockMaker{this->device, 4 * 1024}.setFlags(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached).create();
-	this->textureCommandBuffer = dk::CmdBufMaker{this->device}.create();
-	this->textureCommandBuffer.addMemory(this->textureCommandBufferMemory, 0, 4 * 1024);
-
-	// create image/sampler descriptor memory
-	this->imageDescriptorMemory = this->memory.allocate(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached, sizeof(DkImageDescriptor) * IMAGE_SAMPLER_DESCRIPTOR_COUNT, DK_IMAGE_DESCRIPTOR_ALIGNMENT);
-
-	this->samplerDescriptorMemory = this->memory.allocate(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached, sizeof(DkSamplerDescriptor) * IMAGE_SAMPLER_DESCRIPTOR_COUNT, DK_SAMPLER_DESCRIPTOR_ALIGNMENT);
-
-	// initialize gamepad
-	padConfigureInput(1, HidNpadStyleSet_NpadStandard);
-	padInitializeDefault(&this->pad);
+	this->initializeDeko3d();
 	#else // else for ifdef __switch__
 	if(!glfwInit()) {
 		console::error("failed to initialize glfw\n");
@@ -123,133 +43,10 @@ void render::Window::initialize() {
 
 	// support 4.3
 	if(this->backend == OPENGL_BACKEND) {
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-		glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-		this->window = glfwCreateWindow(this->width, this->height, "eggine", NULL, NULL);
-		glfwMakeContextCurrent(window);
-		glfwSetErrorCallback(glfwErrorCallback);
-		gladLoadGL(glfwGetProcAddress);
-
-		// TODO re-enable in eggine repo
-		// glfwSetWindowSizeCallback(this->window, onWindowResize);
-
-		glEnable(GL_BLEND);
-		this->enableDepthTest(true);
-		this->enableStencilTest(true);
-		// glEnable(GL_CULL_FACE);
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-		glfwSwapInterval(1);
-
-		#ifdef EGGINE_DEBUG
-		glEnable(GL_DEBUG_OUTPUT);
-		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS); 
-		glDebugMessageCallback(glDebugOutput, nullptr);
-		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
-		#endif
-
-		#ifdef EGGINE_DEVELOPER_MODE
-		IMGUI_CHECKVERSION();
-		ImGui::CreateContext();
-		ImGuiIO& io = ImGui::GetIO(); (void)io;
-		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-		ImGui::StyleColorsDark();
-		ImGui_ImplGlfw_InitForOpenGL(this->window, false);
-		ImGui_ImplOpenGL3_Init("#version 150");
-		#endif
+		this->initializeOpenGL();
 	}
 	else {
-		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		this->window = glfwCreateWindow(this->width, this->height, "eggine", NULL, NULL);
-		glfwSetErrorCallback(glfwErrorCallback);
-
-		vk::ApplicationInfo app(
-			"VulkanClear", VK_MAKE_VERSION(1, 0, 0), "ClearScreenEngine", VK_MAKE_VERSION(1, 0, 0), VK_API_VERSION_1_3
-		);
-
-		uint32_t glfwExtensionCount = 0;
-		const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount); // TODO turn this into std::string so we can add our own extensions?
-
-		std::vector<const char*> extensions;
-		for(uint32_t i = 0; i < glfwExtensionCount; i++) {
-			extensions.push_back(glfwExtensions[i]);
-		}
-
-		extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-		extensions.push_back("VK_KHR_xlib_surface");
-		extensions.push_back("VK_KHR_display");
-
-		vk::InstanceCreateInfo createInfo(
-			{}, &app, (uint32_t)RequiredValidationLayers.size(), RequiredValidationLayers.data(), (uint32_t)extensions.size(), extensions.data()
-		);
-
-		vk::Result result = vk::createInstance(&createInfo, nullptr, &this->instance);
-		if(result != vk::Result::eSuccess) {
-			console::error("vulkan: could not create instance: %s\n", vkResultToString((VkResult)result).c_str());
-			exit(1);
-		}
-
-		// handle debug
-		vk::DebugUtilsMessengerCreateInfoEXT debugInfo(
-			{},
-			vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo,
-			vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation,
-			vulkanDebugCallback
-		);
-		
-		result = this->instance.createDebugUtilsMessengerEXT(&debugInfo, nullptr, &this->debugCallback, vk::DispatchLoaderDynamic{ this->instance, vkGetInstanceProcAddr });
-		if(result != vk::Result::eSuccess) {
-			console::error("vulkan: could not create debug callback: %s\n", vkResultToString((VkResult)result).c_str());
-			exit(1);
-		}
-
-		// handle surface
-		VkSurfaceKHR surface;
-		VkResult surfaceResult = glfwCreateWindowSurface(this->instance, this->window, nullptr, &surface);
-		if(surfaceResult != VK_SUCCESS || surface == VK_NULL_HANDLE) {
-			console::error("vulkan: could not create window surface: %s\n", vkResultToString((VkResult)surfaceResult).c_str());
-			exit(1);
-		}
-
-		this->surface = surface;
-
-		// handle physical devices
-		this->pickDevice();
-		this->setupDevice();
-
-		// TODO re-enable in eggine repo
-		// engine->manager->loadResources(engine->manager->carton->database.get()->equals("extension", ".spv")->exec());
-
-		render::Shader* vertexShader = new render::Shader(this);
-		vertexShader->load(getShaderSource(this, "shaders/hello.vert"), render::SHADER_VERTEX);
-
-		render::Shader* fragmentShader = new render::Shader(this);
-		fragmentShader->load(getShaderSource(this, "shaders/hello.frag"), render::SHADER_FRAGMENT);
-
-		this->simpleProgram = new render::Program(this);
-		this->simpleProgram->addShader(vertexShader);
-		this->simpleProgram->addShader(fragmentShader);
-
-		VulkanPipeline pipeline = { this, PRIMITIVE_TRIANGLE_STRIP, 1280.f, 720.f, this->simpleProgram };
-		this->pipelineCache[pipeline] = pipeline.newPipeline();
-
-		vk::CommandPoolCreateInfo commandPoolInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, this->device.graphicsQueueIndex);
-		this->commandPool = this->device.device.createCommandPool(commandPoolInfo); 
-
-		vk::CommandBufferAllocateInfo commandBufferInfo(this->commandPool, vk::CommandBufferLevel::ePrimary, 1);
-		this->mainBuffer = this->device.device.allocateCommandBuffers(commandBufferInfo)[0];
-
-		// create fences/semaphores
-		vk::FenceCreateInfo fenceInfo(vk::FenceCreateFlagBits::eSignaled);
-		this->frameFence = this->device.device.createFence(fenceInfo);
-
-		vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
-		this->isImageAvailable = this->device.device.createSemaphore(semaphoreInfo);
-		this->isRenderFinished = this->device.device.createSemaphore(semaphoreInfo);
-
-		console::print("yippee\n");
+		this->initializeVulkan();
 	}
 	#endif // end for ifdef __switch__
 }
@@ -334,6 +131,268 @@ void render::Window::enableDepthTest(bool enable) {
 	#endif
 }
 
+#ifdef __switch__
+void render::Window::initializeDeko3d() {
+	this->device = dk::DeviceMaker{}.create();
+	this->queue = dk::QueueMaker{this->device}.setFlags(DkQueueFlags_Graphics).create();
+
+	// start the construction of our framebuffers
+	dk::ImageLayout framebufferLayout;
+	dk::ImageLayoutMaker{this->device}
+		.setFlags(DkImageFlags_UsageRender | DkImageFlags_UsagePresent | DkImageFlags_HwCompression)
+		.setFormat(DkImageFormat_RGBA8_Unorm)
+		.setDimensions(this->width, this->height)
+		.initialize(framebufferLayout); // helper data structure for framebuffer creation
+
+	uint32_t framebufferSize  = framebufferLayout.getSize();
+	uint32_t framebufferAlign = framebufferLayout.getAlignment();
+	framebufferSize = alignTo(framebufferSize, framebufferAlign);
+
+	// create the framebuffer's memory blocks from calculated size
+	this->framebufferMemory = dk::MemBlockMaker{this->device, 2 * framebufferSize}.setFlags(DkMemBlockFlags_GpuCached | DkMemBlockFlags_Image).create();
+
+	// create images for framebuffers
+	for(unsigned int i = 0; i < 2; i++) {
+		this->framebuffers[i].initialize(framebufferLayout, this->framebufferMemory, i * framebufferSize);
+	}
+
+	// create the swapchain using the framebuffers
+	std::array<DkImage const*, 2> framebufferArray = { &this->framebuffers[0], &this->framebuffers[1] };
+	this->swapchain = dk::SwapchainMaker{this->device, nwindowGetDefault(), framebufferArray}.create();
+
+	// create the memory that we'll use for the command buffer
+	this->staticCommandBufferMemory = dk::MemBlockMaker{this->device, this->staticCommandBufferSize}.setFlags(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached).create();
+
+	// create a buffer object for the command buffer
+	this->staticCommandBuffer = dk::CmdBufMaker{this->device}.create();
+	this->staticCommandBuffer.addMemory(this->staticCommandBufferMemory, 0, this->staticCommandBufferSize);
+
+	// create command lists for our framebuffers, and also clarify them as render targets
+	for(unsigned int i = 0; i < 2; i++) {
+		dk::ImageView renderTarget { this->framebuffers[i] };
+		this->staticCommandBuffer.bindRenderTargets(&renderTarget);
+		this->framebufferCommandLists[i] = this->staticCommandBuffer.finishList();
+	}
+
+	this->blendState.setSrcColorBlendFactor(DkBlendFactor_SrcAlpha);
+	this->blendState.setDstColorBlendFactor(DkBlendFactor_InvSrcAlpha);
+	this->blendState.setSrcAlphaBlendFactor(DkBlendFactor_SrcAlpha);
+	this->blendState.setDstAlphaBlendFactor(DkBlendFactor_InvSrcAlpha);
+
+	this->colorState.setBlendEnable(0, true);
+
+	this->rasterizerState.setCullMode(DkFace_None);
+
+	// tell the switch that its time to disco
+	this->staticCommandBuffer.setViewports(0, { this->viewport });
+	this->staticCommandBuffer.setScissors(0, { this->scissor });
+	this->staticCommandBuffer.clearColor(0, DkColorMask_RGBA, this->clearColor.r, this->clearColor.g, this->clearColor.b, this->clearColor.a);
+	this->staticCommandBuffer.bindRasterizerState(this->rasterizerState);
+	this->staticCommandBuffer.bindColorState(this->colorState);
+	this->staticCommandBuffer.bindColorWriteState(this->colorWriteState);
+	this->staticCommandBuffer.bindBlendStates(0, this->blendState);
+	this->staticCommandList = this->staticCommandBuffer.finishList();
+
+	// create the dynamic command buffer
+	// create the memory that we'll use for the command buffer
+	this->commandBufferMemory = dk::MemBlockMaker{this->device, this->commandBufferSize}.setFlags(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached).create();
+
+	// create a buffer object for the command buffer
+	this->commandBuffer = dk::CmdBufMaker{this->device}.create();
+	this->commandBuffer.addMemory(this->commandBufferMemory, this->commandBufferSliceSize * this->currentCommandBuffer, this->commandBufferSliceSize);
+
+	// create a buffer object for the texture command buffer
+	this->textureCommandBufferMemory = dk::MemBlockMaker{this->device, 4 * 1024}.setFlags(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached).create();
+	this->textureCommandBuffer = dk::CmdBufMaker{this->device}.create();
+	this->textureCommandBuffer.addMemory(this->textureCommandBufferMemory, 0, 4 * 1024);
+
+	// create image/sampler descriptor memory
+	this->imageDescriptorMemory = this->memory.allocate(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached, sizeof(DkImageDescriptor) * IMAGE_SAMPLER_DESCRIPTOR_COUNT, DK_IMAGE_DESCRIPTOR_ALIGNMENT);
+
+	this->samplerDescriptorMemory = this->memory.allocate(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached, sizeof(DkSamplerDescriptor) * IMAGE_SAMPLER_DESCRIPTOR_COUNT, DK_SAMPLER_DESCRIPTOR_ALIGNMENT);
+
+	// initialize gamepad
+	padConfigureInput(1, HidNpadStyleSet_NpadStandard);
+	padInitializeDefault(&this->pad);
+}
+#else
+void render::Window::initializeOpenGL() {
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+	this->window = glfwCreateWindow(this->width, this->height, "eggine", NULL, NULL);
+	glfwMakeContextCurrent(window);
+	glfwSetErrorCallback(glfwErrorCallback);
+	gladLoadGL(glfwGetProcAddress);
+
+	// TODO re-enable in eggine repo
+	// glfwSetWindowSizeCallback(this->window, onWindowResize);
+
+	glEnable(GL_BLEND);
+	this->enableDepthTest(true);
+	this->enableStencilTest(true);
+	// glEnable(GL_CULL_FACE);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+	glfwSwapInterval(1);
+
+	#ifdef EGGINE_DEBUG
+	glEnable(GL_DEBUG_OUTPUT);
+	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS); 
+	glDebugMessageCallback(glDebugOutput, nullptr);
+	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+	#endif
+
+	#ifdef EGGINE_DEVELOPER_MODE
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+	ImGui::StyleColorsDark();
+	ImGui_ImplGlfw_InitForOpenGL(this->window, false);
+	ImGui_ImplOpenGL3_Init("#version 150");
+	#endif
+}
+
+void render::Window::initializeVulkan() {
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+	this->window = glfwCreateWindow(this->width, this->height, "eggine", NULL, NULL);
+	glfwSetErrorCallback(glfwErrorCallback);
+
+	vk::ApplicationInfo app(
+		"VulkanClear", VK_MAKE_VERSION(1, 0, 0), "ClearScreenEngine", VK_MAKE_VERSION(1, 0, 0), VK_API_VERSION_1_3
+	);
+
+	uint32_t glfwExtensionCount = 0;
+	const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount); // TODO turn this into std::string so we can add our own extensions?
+
+	std::vector<const char*> extensions;
+	for(uint32_t i = 0; i < glfwExtensionCount; i++) {
+		extensions.push_back(glfwExtensions[i]);
+	}
+
+	extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+	extensions.push_back("VK_KHR_xlib_surface");
+	extensions.push_back("VK_KHR_display");
+
+	vk::InstanceCreateInfo createInfo(
+		{}, &app, (uint32_t)RequiredValidationLayers.size(), RequiredValidationLayers.data(), (uint32_t)extensions.size(), extensions.data()
+	);
+
+	vk::Result result = vk::createInstance(&createInfo, nullptr, &this->instance);
+	if(result != vk::Result::eSuccess) {
+		console::error("vulkan: could not create instance: %s\n", vkResultToString((VkResult)result).c_str());
+		exit(1);
+	}
+
+	// handle debug
+	vk::DebugUtilsMessengerCreateInfoEXT debugInfo(
+		{},
+		vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo,
+		vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation,
+		vulkanDebugCallback
+	);
+	
+	result = this->instance.createDebugUtilsMessengerEXT(&debugInfo, nullptr, &this->debugCallback, vk::DispatchLoaderDynamic{ this->instance, vkGetInstanceProcAddr });
+	if(result != vk::Result::eSuccess) {
+		console::error("vulkan: could not create debug callback: %s\n", vkResultToString((VkResult)result).c_str());
+		exit(1);
+	}
+
+	// handle surface
+	VkSurfaceKHR surface;
+	VkResult surfaceResult = glfwCreateWindowSurface(this->instance, this->window, nullptr, &surface);
+	if(surfaceResult != VK_SUCCESS || surface == VK_NULL_HANDLE) {
+		console::error("vulkan: could not create window surface: %s\n", vkResultToString((VkResult)surfaceResult).c_str());
+		exit(1);
+	}
+
+	this->surface = surface;
+
+	// handle physical devices
+	this->pickDevice();
+	this->setupDevice();
+
+	// TODO re-enable in eggine repo
+	// engine->manager->loadResources(engine->manager->carton->database.get()->equals("extension", ".spv")->exec());
+
+	vk::CommandPoolCreateInfo commandPoolInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, this->device.graphicsQueueIndex);
+	this->commandPool = this->device.device.createCommandPool(commandPoolInfo); 
+
+	vk::CommandBufferAllocateInfo commandBufferInfo(this->commandPool, vk::CommandBufferLevel::ePrimary, 1);
+	this->mainBuffer = this->device.device.allocateCommandBuffers(commandBufferInfo)[0];
+
+	// create fences/semaphores
+	vk::FenceCreateInfo fenceInfo(vk::FenceCreateFlagBits::eSignaled);
+	this->frameFence = this->device.device.createFence(fenceInfo);
+
+	vk::SemaphoreCreateInfo semaphoreInfo = vk::SemaphoreCreateInfo();
+	this->isImageAvailable = this->device.device.createSemaphore(semaphoreInfo);
+	this->isRenderFinished = this->device.device.createSemaphore(semaphoreInfo);
+
+	// handle renderpass creation
+	vk::AttachmentDescription colorAttachment(
+		{},
+		this->swapchainFormat.format,
+		vk::SampleCountFlagBits::e1,
+		vk::AttachmentLoadOp::eClear, // color
+		vk::AttachmentStoreOp::eStore, // color
+		vk::AttachmentLoadOp::eDontCare, // stencil
+		vk::AttachmentStoreOp::eDontCare, // stencil
+		vk::ImageLayout::eUndefined,
+		vk::ImageLayout::ePresentSrcKHR
+	);
+
+	vk::AttachmentReference attachmentReference(0, vk::ImageLayout::eColorAttachmentOptimal); // attach to the output color location in the shader
+	vk::SubpassDescription subpass(
+		{},
+		vk::PipelineBindPoint::eGraphics,
+		0,
+		nullptr,
+		1,
+		&attachmentReference
+	);
+
+	// create a subpass dependency that waits for color
+	vk::SubpassDependency dependency(
+		VK_SUBPASS_EXTERNAL, // src
+		0, // dest
+		vk::PipelineStageFlagBits::eColorAttachmentOutput, // src stage
+		vk::PipelineStageFlagBits::eColorAttachmentOutput, // dest stage
+		{}, // src access
+		vk::AccessFlagBits::eColorAttachmentWrite // dest access
+	);
+
+	vk::RenderPassCreateInfo renderPassInfo({}, 1, &colorAttachment, 1, &subpass, 1, &dependency);
+	result = this->device.device.createRenderPass(&renderPassInfo, nullptr, &this->renderPass); // TODO remember to clean up
+	if(result != vk::Result::eSuccess) {
+		console::error("vulkan: could not create render pass: %s\n", vkResultToString((VkResult)result).c_str());
+		exit(1);
+	}
+
+	this->framebuffers.resize(this->renderImageViews.size());
+	for(size_t i = 0; i < this->renderImageViews.size(); i++) {
+		vk::ImageView attachments[] = { this->renderImageViews[i] };
+		vk::FramebufferCreateInfo framebufferInfo(
+			{},
+			this->renderPass,
+			1,
+			attachments,
+			this->swapchainExtent.width,
+			this->swapchainExtent.height,
+			1
+		);
+
+		vk::Result result = this->device.device.createFramebuffer(&framebufferInfo, nullptr, &this->framebuffers[i]);
+		if(result != vk::Result::eSuccess) {
+			console::error("vulkan: could not create framebuffers: %s\n", vkResultToString((VkResult)result).c_str());
+			exit(1);
+		}
+	}
+}
+#endif
+
 void render::Window::deinitialize() {
 	#ifdef __switch__
 	this->queue.waitIdle();
@@ -397,10 +456,8 @@ void render::Window::prerender() {
 			exit(1);
 		}
 
-		VulkanPipeline pipeline = { this, PRIMITIVE_TRIANGLE_STRIP, 1280.f, 720.f, this->simpleProgram };
-
 		// acquire the next image, signalling using the isImageAvailable semaphore
-		this->currentFramebuffer[pipeline] = this->device.device.acquireNextImageKHR(this->swapchain, UINT64_MAX, this->isImageAvailable).value;
+		this->currentFramebuffer = this->device.device.acquireNextImageKHR(this->swapchain, UINT64_MAX, this->isImageAvailable).value;
 		
 		// prepare the primary command buffer
 		vk::CommandBufferBeginInfo bufferBeginInfo({}, nullptr);
@@ -409,7 +466,7 @@ void render::Window::prerender() {
 
 		// only do one render pass for now
 		vk::ClearValue clearColor(std::array<float, 4>({{ 0.0f, 0.0f, 0.0f, 1.0f }})); // ????
-		vk::RenderPassBeginInfo renderPassInfo(*this->pipelineCache[pipeline].renderPass, *this->pipelineCache[pipeline].framebuffers[this->currentFramebuffer[pipeline]], { { 0, 0 }, this->swapchainExtent }, 1, &clearColor);
+		vk::RenderPassBeginInfo renderPassInfo(this->renderPass, this->framebuffers[this->currentFramebuffer], { { 0, 0 }, this->swapchainExtent }, 1, &clearColor);
 
 		this->mainBuffer.beginRenderPass(&renderPassInfo, vk::SubpassContents::eInline);
 	}
@@ -455,12 +512,6 @@ void render::Window::render() {
 		glfwSwapBuffers(this->window);
 	}
 	else {
-		// go pipeline
-		VulkanPipeline pipeline = { this, PRIMITIVE_TRIANGLE_STRIP, 1280.f, 720.f, this->simpleProgram };
-		this->mainBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, *this->pipelineCache[pipeline].pipeline);
-
-		this->mainBuffer.draw(3, 1, 0, 0);
-
 		// finalize render pass
 		this->mainBuffer.endRenderPass();
 		this->mainBuffer.end();
@@ -478,7 +529,7 @@ void render::Window::render() {
 		}
 
 		// present the image. wait for the queue's submit signal
-		vk::PresentInfoKHR presentInfo(1, signalSemaphores, 1, &this->swapchain, &this->currentFramebuffer[pipeline], nullptr);
+		vk::PresentInfoKHR presentInfo(1, signalSemaphores, 1, &this->swapchain, &this->currentFramebuffer, nullptr);
 		result = this->presentationQueue.presentKHR(presentInfo);
 		if(result != vk::Result::eSuccess) {
 			console::print("vulkan: failed to present via presentation queue %s\n", vkResultToString((VkResult)result).c_str());

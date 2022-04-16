@@ -27,115 +27,9 @@
 #include "texture.h"
 #include "../util/time.h"
 
+#include "stencil.h"
+
 namespace render {
-	enum StencilFunction {
-		STENCIL_NEVER,
-		STENCIL_LESS,
-		STENCIL_LESS_EQUAL,
-		STENCIL_GREATER,
-		STENCIL_GREATER_EQUAL,
-		STENCIL_EQUAL,
-		STENCIL_NOT_EQUAL,
-		STENCIL_ALWAYS,
-	};
-
-	#ifdef __switch
-	#else
-	inline GLenum stencilToGLStencil(StencilFunction type) {
-		switch(type) {
-			case STENCIL_NEVER: {
-				return GL_NEVER;
-			}
-
-			case STENCIL_LESS: {
-				return GL_LESS;
-			}
-
-			case STENCIL_LESS_EQUAL: {
-				return GL_LEQUAL;
-			}
-
-			case STENCIL_GREATER: {
-				return GL_GREATER;
-			}
-
-			case STENCIL_GREATER_EQUAL: {
-				return GL_GEQUAL;
-			}
-
-			case STENCIL_EQUAL: {
-				return GL_EQUAL;
-			}
-
-			case STENCIL_NOT_EQUAL: {
-				return GL_NOTEQUAL;
-			}
-
-			case STENCIL_ALWAYS: {
-				return GL_ALWAYS;
-			}
-
-			default: {
-				return GL_NEVER;
-			}
-		}
-	}
-	#endif
-
-	enum StencilOperation {
-		STENCIL_KEEP,
-		STENCIL_ZERO,
-		STENCIL_REPLACE,
-		STENCIL_INCREMENT,
-		STENCIL_INCREMENT_WRAP,
-		STENCIL_DECREMENT,
-		STENCIL_DECREMENT_WRAP,
-		STENCIL_INVERT,
-	};
-
-	#ifdef __switch__
-	#else
-	inline GLenum stencilOPToGLStencilOP(StencilOperation type) {
-		switch(type) {
-			case STENCIL_KEEP: {
-				return GL_KEEP;
-			}
-
-			case STENCIL_ZERO: {
-				return GL_ZERO;
-			}
-
-			case STENCIL_REPLACE: {
-				return GL_REPLACE;
-			}
-
-			case STENCIL_INCREMENT: {
-				return GL_INCR;
-			}
-
-			case STENCIL_INCREMENT_WRAP: {
-				return GL_INCR_WRAP;
-			}
-
-			case STENCIL_DECREMENT: {
-				return GL_DECR;
-			}
-
-			case STENCIL_DECREMENT_WRAP: {
-				return GL_DECR_WRAP;
-			}
-
-			case STENCIL_INVERT: {
-				return GL_INVERT;
-			}
-
-			default: {
-				return GL_KEEP;
-			}
-		}
-	}
-	#endif
-
 	#ifndef __switch__
 	struct Device {
 		vk::Device device;
@@ -212,10 +106,14 @@ namespace render {
 
 			void addTexture(switch_memory::Piece* tempMemory, dk::ImageView& view, unsigned int width, unsigned int height);
 			void bindTexture(unsigned int location, class Texture* texture);
+			void initializeDeko3d();
 			#else
 			GLFWwindow* window = nullptr;
 			GLFWgamepadstate gamepad;
 			bool hasGamepad;
+
+			void initializeOpenGL();
+			void initializeVulkan();
 			#endif
 
 			// TODO re-enable in eggine repo
@@ -224,10 +122,11 @@ namespace render {
 			#ifdef __switch__
 			RenderBackend backend = DEKO_BACKEND;
 			#else
-			RenderBackend backend = OPENGL_BACKEND;
+			RenderBackend backend = VULKAN_BACKEND;
 			#endif
 
 		protected:
+		public:
 			unsigned int errorCount = 0;
 
 			glm::vec4 clearColor = glm::vec4(0.0f, 0.0f, 0.0f, 0.0f);
@@ -286,12 +185,14 @@ namespace render {
 			vk::SwapchainKHR swapchain;
 			vk::Extent2D swapchainExtent;
 			vk::SurfaceFormatKHR swapchainFormat;
+			vk::RenderPass renderPass;
+			std::vector<vk::Framebuffer> framebuffers;
+			uint32_t currentFramebuffer;
 
 			std::vector<vk::Image> renderImages;
 			std::vector<vk::ImageView> renderImageViews;
 
 			tsl::robin_map<VulkanPipeline, VulkanPipelineResult> pipelineCache;
-			tsl::robin_map<VulkanPipeline, uint32_t> currentFramebuffer;
 
 			vk::CommandPool commandPool;
 			vk::CommandBuffer mainBuffer;

@@ -192,3 +192,4 @@ if __name__ == "__main__":
 			if regex.findall(file):
 				stage = "vert" if ".vert" in file else "frag"
 				os.system(f"uam {root}/{file} -s {stage} -o {root}/{file}.dksh")
+				os.system(f"glslc {root}/{file} -fshader-stage={stage} -o {root}/{file}.spv")
