@@ -4,6 +4,7 @@
 #include <deko3d.hpp>
 #else
 #include <GLFW/glfw3.h>
+#include <vulkan/vulkan.hpp>
 #endif
 
 #include <vector>
@@ -207,14 +208,145 @@ namespace render {
 			}
 		}
 	}
+
+	inline vk::Format attributeTypeToVulkanType(VertexAttributeType type, unsigned short vectorLength) {
+		if(vectorLength == 1) {
+			switch(type) {
+				case VERTEX_ATTRIB_UNSIGNED_BYTE: {
+					return vk::Format::eR8Uint;
+				}
+
+				case VERTEX_ATTRIB_BYTE: {
+					return vk::Format::eR8Sint;
+				}
+
+				case VERTEX_ATTRIB_UNSIGNED_SHORT: {
+					return vk::Format::eR16Uint;
+				}
+
+				case VERTEX_ATTRIB_SHORT: {
+					return vk::Format::eR16Sint;
+				}
+
+				case VERTEX_ATTRIB_UNSIGNED_INT: {
+					return vk::Format::eR32Uint;
+				}
+
+				case VERTEX_ATTRIB_INT: {
+					return vk::Format::eR32Sint;
+				}
+
+				case VERTEX_ATTRIB_FLOAT: {
+					return vk::Format::eR32Sfloat;
+				}
+			}
+		}
+		else if(vectorLength == 2) {
+			switch(type) {
+				case VERTEX_ATTRIB_UNSIGNED_BYTE: {
+					return vk::Format::eR8G8Uint;
+				}
+
+				case VERTEX_ATTRIB_BYTE: {
+					return vk::Format::eR8G8Sint;
+				}
+
+				case VERTEX_ATTRIB_UNSIGNED_SHORT: {
+					return vk::Format::eR16G16Uint;
+				}
+
+				case VERTEX_ATTRIB_SHORT: {
+					return vk::Format::eR16G16Sint;
+				}
+
+				case VERTEX_ATTRIB_UNSIGNED_INT: {
+					return vk::Format::eR32G32Uint;
+				}
+
+				case VERTEX_ATTRIB_INT: {
+					return vk::Format::eR32G32Sint;
+				}
+
+				case VERTEX_ATTRIB_FLOAT: {
+					return vk::Format::eR32G32Sfloat;
+				}
+			}
+		}
+		else if(vectorLength == 3) {
+			switch(type) {
+				case VERTEX_ATTRIB_UNSIGNED_BYTE: {
+					return vk::Format::eR8G8B8Uint;
+				}
+
+				case VERTEX_ATTRIB_BYTE: {
+					return vk::Format::eR8G8B8Sint;
+				}
+
+				case VERTEX_ATTRIB_UNSIGNED_SHORT: {
+					return vk::Format::eR16G16B16Uint;
+				}
+
+				case VERTEX_ATTRIB_SHORT: {
+					return vk::Format::eR16G16B16Sint;
+				}
+
+				case VERTEX_ATTRIB_UNSIGNED_INT: {
+					return vk::Format::eR32G32B32Uint;
+				}
+
+				case VERTEX_ATTRIB_INT: {
+					return vk::Format::eR32G32B32Sint;
+				}
+
+				case VERTEX_ATTRIB_FLOAT: {
+					return vk::Format::eR32G32B32Sfloat;
+				}
+			}
+		}
+		else if(vectorLength == 4) {
+			switch(type) {
+				case VERTEX_ATTRIB_UNSIGNED_BYTE: {
+					return vk::Format::eR8G8B8A8Uint;
+				}
+
+				case VERTEX_ATTRIB_BYTE: {
+					return vk::Format::eR8G8B8A8Sint;
+				}
+
+				case VERTEX_ATTRIB_UNSIGNED_SHORT: {
+					return vk::Format::eR16G16B16A16Uint;
+				}
+
+				case VERTEX_ATTRIB_SHORT: {
+					return vk::Format::eR16G16B16A16Sint;
+				}
+
+				case VERTEX_ATTRIB_UNSIGNED_INT: {
+					return vk::Format::eR32G32B32A32Uint;
+				}
+
+				case VERTEX_ATTRIB_INT: {
+					return vk::Format::eR32G32B32A32Sint;
+				}
+
+				case VERTEX_ATTRIB_FLOAT: {
+					return vk::Format::eR32G32B32A32Sfloat;
+				}
+			}
+		}
+
+		return vk::Format::eR8Uint;
+	}
 	#endif
 	
 	class VertexAttributes {
+		friend struct VulkanPipeline;
+		friend class State;
+		
 		public:
 			VertexAttributes(class Window* window);
 
 			void addVertexAttribute(class VertexBuffer* buffer, unsigned short attributeLocation, unsigned short vectorLength, VertexAttributeType type, unsigned short offset, unsigned short stride, unsigned short divisor);
-			void bind();
 
 		protected:
 			Window* window = nullptr;
@@ -227,6 +359,9 @@ namespace render {
 			std::vector<DkVtxBufferState> bufferStates;
 			#else
 			GLuint vertexArrayObject = GL_INVALID_INDEX;
+
+			std::vector<vk::VertexInputBindingDescription> inputBindings;
+			std::vector<vk::VertexInputAttributeDescription> inputAttributes;
 			#endif
 
 			void buildCommandLists();

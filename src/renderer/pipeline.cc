@@ -1,7 +1,9 @@
 #include "pipeline.h"
 
 #include "program.h"
+#include "vertexAttributes.h"
 #include "window.h"
+
 #include "debug.h"
 
 render::VulkanPipelineResult render::VulkanPipeline::newPipeline() {
@@ -22,7 +24,17 @@ render::VulkanPipelineResult render::VulkanPipeline::newPipeline() {
 	
 	// handle pipeline
 	{
-		vk::PipelineVertexInputStateCreateInfo vertexInputInfo({}, 0, nullptr, 0, nullptr);
+		vk::PipelineVertexInputStateCreateInfo vertexInputInfo;
+		if(this->attributes != nullptr) {
+			vertexInputInfo = vk::PipelineVertexInputStateCreateInfo(
+				{},
+				(uint32_t)this->attributes->inputBindings.size(),
+				this->attributes->inputBindings.data(),
+				(uint32_t)this->attributes->inputAttributes.size(),
+				this->attributes->inputAttributes.data()
+			);
+		}
+
 		vk::PipelineInputAssemblyStateCreateInfo inputAssemblyInfo({}, primitiveToVulkanPrimitive(this->topology), false);
 		vk::Viewport viewport(0.0f, 0.0f, this->viewportWidth, this->viewportHeight, 0.0f, 1.0f);
 		vk::Rect2D scissor({ 0, 0 }, this->window->swapchainExtent);

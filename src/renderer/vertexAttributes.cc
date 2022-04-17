@@ -23,25 +23,6 @@ void render::VertexAttributes::addVertexAttribute(class VertexBuffer* buffer, un
 	});
 }
 
-void render::VertexAttributes::bind() {
-	#ifdef __switch__
-	this->buildCommandLists();
-
-	unsigned short id = 0;
-	for(VertexBuffer* buffer: this->bufferBindOrder) {
-		buffer->bind(id++);
-	}
-
-	this->window->commandBuffer.bindVtxAttribState(dk::detail::ArrayProxy(this->attributeStates.size(), (const DkVtxAttribState*)this->attributeStates.data()));
-	this->window->commandBuffer.bindVtxBufferState(dk::detail::ArrayProxy(this->bufferStates.size(), (const DkVtxBufferState*)this->bufferStates.data()));
-	#else
-	if(this->window->backend == OPENGL_BACKEND) {
-		this->buildCommandLists();
-		glBindVertexArray(this->vertexArrayObject);
-	}
-	#endif
-}
-
 void render::VertexAttributes::buildCommandLists() {
 	#ifdef __switch__
 	this->bufferBindOrder.clear();
@@ -100,6 +81,37 @@ void render::VertexAttributes::buildCommandLists() {
 		}
 
 		glBindVertexArray(0);
+	}
+	else {
+		if(this->inputBindings.size() == 0) {
+			unsigned short bufferId = 0;
+			VertexBuffer* currentBuffer = nullptr;
+			bool incrementBufferId = this->attributes[0].buffer;
+
+			for(VertexAttribute &attribute: this->attributes) {
+				if(currentBuffer != attribute.buffer) {
+					console::print("vertex input binding: %u\n", bufferId);
+					this->inputBindings.push_back(vk::VertexInputBindingDescription(
+						bufferId,
+						attribute.stride,
+						attribute.divisor == 0 ? vk::VertexInputRate::eVertex : vk::VertexInputRate::eInstance
+					));
+					incrementBufferId = true;
+				}
+
+				console::print("vertex attribute binding: %u\n", bufferId);
+				this->inputAttributes.push_back(vk::VertexInputAttributeDescription(
+					attribute.attributeLocation,
+					bufferId,
+					attributeTypeToVulkanType(attribute.type, attribute.vectorLength),
+					attribute.offset
+				));
+
+				if(incrementBufferId) {
+					bufferId++;
+				}
+			}
+		}
 	}
 	#endif
 }

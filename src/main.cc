@@ -60,9 +60,15 @@ int main(int argc, char* argv[]) {
 
 	render::State state = window.getState(0);
 
+	// vertices
+	render::VertexAttributes triangleAttributes(&window);
+	triangleAttributes.addVertexAttribute((render::VertexBuffer*)0x1, 0, 2, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec2), 0);
+	triangleAttributes.addVertexAttribute((render::VertexBuffer*)0x2, 1, 2, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec2), 0);
+
 	if(!window.getErrorCount()) {
-		for(unsigned int i = 0; i < 100000; i++) {
+		for(unsigned int i = 0; i < 1; i++) {
 			window.prerender();
+			state.bindVertexAttributes(&triangleAttributes);
 			state.bindProgram(simpleProgram);
 			state.draw(render::PRIMITIVE_TRIANGLE_STRIP, 0, 3, 0, 1);
 			window.render();

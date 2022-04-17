@@ -6,6 +6,7 @@
 
 #include "../engine/console.h"
 #include "program.h"
+#include "vertexAttributes.h"
 #include "window.h"
 
 render::State::State() {
@@ -37,7 +38,14 @@ void render::State::bindPipeline() {
 			exit(1);
 		}
 		
-		render::VulkanPipeline pipeline = { this->window, this->current.primitive, (float)this->window->width, (float)this->window->height, this->current.program };
+		render::VulkanPipeline pipeline = {
+			this->window,
+			this->current.primitive,
+			(float)this->window->width,
+			(float)this->window->height,
+			this->current.program,
+			this->current.attributes,
+		};
 		if(this->window->pipelineCache.find(pipeline) == this->window->pipelineCache.end()) {
 			this->window->pipelineCache[pipeline] = pipeline.newPipeline(); // TODO move this creation step to the window class??
 		}
@@ -68,4 +76,24 @@ void render::State::bindProgram(render::Program* program) {
 		program->compile();
 		glUseProgram(this->current.program->program);
 	}
+}
+
+void render::State::bindVertexAttributes(render::VertexAttributes* attributes) {
+	this->current.attributes = attributes;
+
+	attributes->buildCommandLists();
+
+	#ifdef __switch__
+	unsigned short id = 0;
+	for(VertexBuffer* buffer: this->bufferBindOrder) {
+		buffer->bind(id++);
+	}
+
+	this->window->commandBuffer.bindVtxAttribState(dk::detail::ArrayProxy(this->attributeStates.size(), (const DkVtxAttribState*)this->attributeStates.data()));
+	this->window->commandBuffer.bindVtxBufferState(dk::detail::ArrayProxy(this->bufferStates.size(), (const DkVtxBufferState*)this->bufferStates.data()));
+	#else
+	if(this->window->backend == OPENGL_BACKEND) {
+		glBindVertexArray(attributes->vertexArrayObject);
+	}
+	#endif
 }

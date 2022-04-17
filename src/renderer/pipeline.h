@@ -23,12 +23,17 @@ namespace render {
 		float viewportWidth;
 		float viewportHeight;
 		class Program* program;
+		class VertexAttributes* attributes;
 
 		VulkanPipelineResult newPipeline();
 	};
 
 	inline bool operator==(const VulkanPipeline &lhs, const VulkanPipeline &rhs) {
 		return lhs.topology == rhs.topology && lhs.viewportWidth == rhs.viewportWidth && lhs.viewportHeight == rhs.viewportHeight && lhs.program == rhs.program;
+	}
+
+	inline bool operator!=(const VulkanPipeline &lhs, const VulkanPipeline &rhs) {
+		return !(lhs == rhs);
 	}
 };
 

@@ -31,6 +31,8 @@ namespace render {
 		PrimitiveType primitive;
 
 		class Program* program = nullptr;
+
+		class VertexAttributes* attributes = nullptr;
 	};
 
 	inline bool operator==(const SubState &a, const SubState &b) {
@@ -44,7 +46,8 @@ namespace render {
 			&& a.stencilEnabled == b.stencilEnabled
 			&& a.depthEnabled == b.depthEnabled
 			&& a.primitive == b.primitive
-			&& a.program == b.program;
+			&& a.program == b.program
+			&& a.attributes == b.attributes;
 	}
 
 	inline bool operator!=(const SubState &a, const SubState &b) {
@@ -62,7 +65,10 @@ namespace render {
 			State(class Window* window);
 			
 			void draw(PrimitiveType type, unsigned int firstVertex, unsigned int vertexCount, unsigned int firstInstance, unsigned int instanceCount);
+
 			void bindProgram(class Program* program);
+			void bindVertexAttributes(class VertexAttributes* attributes);
+
 			void setStencilFunction(StencilFunction func, unsigned int reference, unsigned int mask);
 			void setStencilMask(unsigned int mask);
 			void setStencilOperation(StencilOperation stencilFail, StencilOperation depthFail, StencilOperation pass);
