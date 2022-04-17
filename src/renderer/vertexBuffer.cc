@@ -19,6 +19,8 @@ render::VertexBuffer::~VertexBuffer() {
 void render::VertexBuffer::setDynamicDraw(bool isDynamicDraw) {
 	#ifndef __switch__
 	this->usage = isDynamicDraw ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW;
+	this->isDynamicDraw = isDynamicDraw;
+	this->oldSize = (uint32_t)-1; // force buffer reallocation
 	#endif
 }
 
@@ -82,20 +84,49 @@ void render::VertexBuffer::setData(void* data, unsigned int size, unsigned int a
 		if(this->size != this->oldSize) {
 			this->destroyBuffer();
 			
-			vk::BufferCreateInfo bufferInfo(
-				{},
-				size,
-				vk::BufferUsageFlagBits::eVertexBuffer,
-				vk::SharingMode::eExclusive
-			);
-
-			this->buffer = this->window->allocateBuffer(
-				bufferInfo, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
-			);
+			if(this->isDynamicDraw) { // do not use staging buffer if we're dynamic draw
+				this->gpuBuffer = this->window->allocateVulkanBuffer(
+					vk::BufferCreateInfo(
+						{},
+						size,
+						vk::BufferUsageFlagBits::eVertexBuffer,
+						vk::SharingMode::eExclusive
+					),
+					vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+				);
+			}
+			else {
+				this->stagingBuffer = this->window->allocateVulkanBuffer(
+					vk::BufferCreateInfo(
+						{},
+						size,
+						vk::BufferUsageFlagBits::eTransferSrc,
+						vk::SharingMode::eExclusive
+					),
+					vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+				);
+				
+				this->gpuBuffer = this->window->allocateVulkanBuffer(
+					vk::BufferCreateInfo(
+						{},
+						size,
+						vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+						vk::SharingMode::eExclusive
+					),
+					vk::MemoryPropertyFlagBits::eDeviceLocal
+				);
+			}
 		}
 
-		memcpy(this->buffer.map(), data, this->size);
-		this->buffer.unmap();
+		if(this->isDynamicDraw) {
+			memcpy(this->gpuBuffer.map(), data, this->size);
+			this->gpuBuffer.unmap();
+		}
+		else {
+			memcpy(this->stagingBuffer.map(), data, this->size);
+			this->stagingBuffer.unmap();
+			this->needsCopy = true;
+		}
 	}
 	#endif
 
@@ -126,7 +157,8 @@ void render::VertexBuffer::destroyBuffer() {
 	}
 	else {
 		if(this->oldSize != 0) {
-			this->buffer.destroy();
+			this->stagingBuffer.destroy();
+			this->gpuBuffer.destroy();
 		}
 	}
 	#endif

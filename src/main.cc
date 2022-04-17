@@ -73,6 +73,7 @@ int main(int argc, char* argv[]) {
 	};
 
 	render::VertexBuffer triangleBuffer(&window);
+	triangleBuffer.setDynamicDraw(true);
 	triangleBuffer.setData(triangleVertices, sizeof(triangleVertices), alignof(glm::vec2));
 
 	glm::vec3 triangleColors[] = {
@@ -92,9 +93,24 @@ int main(int argc, char* argv[]) {
 	if(!window.getErrorCount()) {
 		for(unsigned int i = 0; i < 100000; i++) {
 			window.prerender();
+
+			glm::vec2 triangleVertices[] = {
+				glm::vec2(-0.5, 0.8),
+				glm::vec2(-0.5, -1.0),
+				glm::vec2(0.5, 0.8),
+				glm::vec2(0.5, -1.0),
+			};
+
+			for(uint8_t j = 0; j < 4; j++) {
+				triangleVertices[j].x += static_cast<float>(rand()) / static_cast<float>(RAND_MAX) / 10.0f;
+				triangleVertices[j].y += static_cast<float>(rand()) / static_cast<float>(RAND_MAX) / 10.0f;
+			}	
+			triangleBuffer.setData(triangleVertices, sizeof(triangleVertices), alignof(glm::vec2));
+
 			state.bindProgram(simpleProgram);
 			state.bindVertexAttributes(&triangleAttributes);
 			state.draw(render::PRIMITIVE_TRIANGLE_STRIP, 0, 4, 0, 1);
+
 			window.render();
 		}
 	}

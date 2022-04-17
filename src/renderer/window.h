@@ -117,7 +117,7 @@ namespace render {
 			#ifdef __switch__
 			RenderBackend backend = DEKO_BACKEND;
 			#else
-			RenderBackend backend = VULKAN_BACKEND;
+			RenderBackend backend = OPENGL_BACKEND;
 			#endif
 
 		protected:
@@ -211,7 +211,11 @@ namespace render {
 			void initializeVulkan();
 
 			uint32_t findVulkanMemoryType(vk::MemoryRequirements requirements, vk::MemoryPropertyFlags propertyFlags);
-			VulkanBuffer allocateBuffer(vk::BufferCreateInfo &bufferInfo, vk::MemoryPropertyFlags propertyFlags);
+			VulkanBuffer allocateVulkanBuffer(vk::BufferCreateInfo bufferInfo, vk::MemoryPropertyFlags propertyFlags);
+			void copyVulkanBuffer(render::VulkanBuffer source, render::VulkanBuffer destination);
+
+			std::vector<vk::Fence> memoryCopyFences;
+			std::vector<vk::CommandBuffer> memoryCopyCommandBuffers;
 			#endif
 	};
 };

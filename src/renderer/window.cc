@@ -379,6 +379,17 @@ void render::Window::render() {
 		this->renderStates[0].buffer[this->framePingPong].endRenderPass();
 		this->renderStates[0].buffer[this->framePingPong].end();
 
+		// we need to wait for any copy operations to finish before we process main command buffer
+		if(this->memoryCopyFences.size() > 0) {
+			console::print("begin the wait\n");
+			vk::Result result = this->device.device.waitForFences(this->memoryCopyFences.size(), this->memoryCopyFences.data(), true, UINT64_MAX);
+			if(result != vk::Result::eSuccess) {
+				console::print("vulkan: failed to wait for memory transfer fences %s\n", vkResultToString((VkResult)result).c_str());
+				exit(1);
+			}
+			console::print("wait finished\n");
+		}
+
 		// submit the image for presentation
 		vk::Semaphore waitSemaphores[] = { this->isImageAvailable[this->framePingPong] };
 		vk::Semaphore signalSemaphores[] = { this->isRenderFinished[this->framePingPong] };
@@ -401,6 +412,19 @@ void render::Window::render() {
 		else if(result != vk::Result::eSuccess) {
 			console::print("vulkan: failed to present via presentation queue %s\n", vkResultToString((VkResult)result).c_str());
 			exit(1);
+		}
+
+		// end copy operations
+		for(vk::Fence fence: this->memoryCopyFences) {
+			this->device.device.destroyFence(fence);
+		}
+		this->memoryCopyFences.clear();
+
+		if(this->memoryCopyCommandBuffers.size() > 0) {
+			this->device.device.freeCommandBuffers(
+				this->commandPool, this->memoryCopyCommandBuffers.size(), this->memoryCopyCommandBuffers.data()
+			);
+			this->memoryCopyCommandBuffers.clear();
 		}
 
 		this->framePingPong = (this->framePingPong + 1) % 2;

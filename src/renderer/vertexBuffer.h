@@ -43,7 +43,12 @@ namespace render {
 			GLenum usage = GL_STATIC_DRAW;
 			uint32_t size = 0; // current size of the buffer
 
-			VulkanBuffer buffer;
+			VulkanBuffer stagingBuffer;
+			VulkanBuffer gpuBuffer;
+
+			bool isDynamicDraw = false;
+
+			bool needsCopy = false;
 			#endif
 			uint32_t oldSize = 0;
 

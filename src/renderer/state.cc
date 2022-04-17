@@ -62,7 +62,13 @@ void render::State::bindPipeline() {
 		std::vector<vk::Buffer> vertexBuffers;
 		std::vector<vk::DeviceSize> offsets;
 		for(VertexAttribute attribute: this->current.attributes->attributes) {
-			vertexBuffers.push_back(attribute.buffer->buffer.getBuffer());
+			// figure out if we need to copy buffer contents
+			if(attribute.buffer->needsCopy) {
+				this->window->copyVulkanBuffer(attribute.buffer->stagingBuffer, attribute.buffer->gpuBuffer);
+				attribute.buffer->needsCopy = false;
+			}
+			
+			vertexBuffers.push_back(attribute.buffer->gpuBuffer.getBuffer());
 			offsets.push_back(0);
 		}
 

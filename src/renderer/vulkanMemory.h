@@ -3,7 +3,6 @@
 #ifndef __switch__
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.hpp>
-#endif
 
 namespace render {
 	struct VulkanBuffer {
@@ -41,3 +40,4 @@ namespace render {
 			void* mappedMemory = nullptr;
 	};
 };
+#endif
