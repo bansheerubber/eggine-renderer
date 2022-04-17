@@ -7,6 +7,7 @@
 #include "../engine/console.h"
 #include "program.h"
 #include "vertexAttributes.h"
+#include "vertexBuffer.h"
 #include "window.h"
 
 render::State::State() {
@@ -51,6 +52,16 @@ void render::State::bindPipeline() {
 		}
 
 		this->buffer[this->window->framePingPong].bindPipeline(vk::PipelineBindPoint::eGraphics, *this->window->pipelineCache[pipeline].pipeline);
+
+		// probably should move vertex buffer binding away from here
+		std::vector<vk::Buffer> vertexBuffers;
+		std::vector<vk::DeviceSize> offsets;
+		for(VertexAttribute attribute: this->current.attributes->attributes) {
+			vertexBuffers.push_back(attribute.buffer->buffer);
+			offsets.push_back(0);
+		}
+
+		this->buffer[this->window->framePingPong].bindVertexBuffers(0, vertexBuffers.size(), vertexBuffers.data(), offsets.data());
 
 		this->old = this->current;
 	}

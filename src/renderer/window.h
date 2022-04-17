@@ -102,14 +102,10 @@ namespace render {
 
 			void addTexture(switch_memory::Piece* tempMemory, dk::ImageView& view, unsigned int width, unsigned int height);
 			void bindTexture(unsigned int location, class Texture* texture);
-			void initializeDeko3d();
 			#else
 			GLFWwindow* window = nullptr;
 			GLFWgamepadstate gamepad;
 			bool hasGamepad;
-
-			void initializeOpenGL();
-			void initializeVulkan();
 			#endif
 
 			// TODO re-enable in eggine repo
@@ -173,6 +169,8 @@ namespace render {
 			dk::BlendState blendState = dk::BlendState {};
 
 			PadState pad;
+
+			void initializeDeko3d();
 			#else
 			tsl::robin_map<uint32_t, State> renderStates;
 			
@@ -206,6 +204,11 @@ namespace render {
 			void pickDevice();
 			void setupDevice();
 			void createSwapchain();
+
+			void initializeOpenGL();
+			void initializeVulkan();
+
+			uint32_t findVulkanMemoryType(vk::MemoryRequirements requirements, vk::MemoryPropertyFlags propertyFlags);
 			#endif
 	};
 };

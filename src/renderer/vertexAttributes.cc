@@ -90,7 +90,6 @@ void render::VertexAttributes::buildCommandLists() {
 
 			for(VertexAttribute &attribute: this->attributes) {
 				if(currentBuffer != attribute.buffer) {
-					console::print("vertex input binding: %u\n", bufferId);
 					this->inputBindings.push_back(vk::VertexInputBindingDescription(
 						bufferId,
 						attribute.stride,
@@ -99,7 +98,6 @@ void render::VertexAttributes::buildCommandLists() {
 					incrementBufferId = true;
 				}
 
-				console::print("vertex attribute binding: %u\n", bufferId);
 				this->inputAttributes.push_back(vk::VertexInputAttributeDescription(
 					attribute.attributeLocation,
 					bufferId,

@@ -4,6 +4,7 @@
 #include <deko3d.hpp>
 #else
 #include <GLFW/glfw3.h>
+#include <vulkan/vulkan.hpp>
 #endif
 
 #include "memory.h"
@@ -12,6 +13,7 @@
 
 namespace render {
 	class VertexBuffer {
+		friend class State;
 		friend class VertexAttributes;
 		
 		public:
@@ -20,10 +22,6 @@ namespace render {
 			
 			void setDynamicDraw(bool isDynamicDraw);
 			void setData(void* data, unsigned int size, unsigned int align);
-
-			void createBuffer(); // create a normal buffer
-			void createDynamicBuffer(); // create buffer with GL_DYNAMIC_DRAW
-			void destroyBuffer();
 
 			class Window* window;
 
@@ -43,6 +41,12 @@ namespace render {
 			GLuint bufferId = GL_INVALID_INDEX;
 			GLenum usage = GL_STATIC_DRAW;
 			unsigned int size = 0; // current size of the buffer
+			unsigned int oldSize = 0;
+
+			vk::Buffer buffer;
+			vk::DeviceMemory memory;
+
+			void destroyBuffer();
 			#endif
 	};
 };

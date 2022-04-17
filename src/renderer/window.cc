@@ -183,6 +183,7 @@ void render::Window::initializeOpenGL() {
 	// this->enableDepthTest(true);
 	// this->enableStencilTest(true);
 	glEnable(GL_CULL_FACE);
+	glEnable(GL_FRAMEBUFFER_SRGB);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glfwSwapInterval(1);
@@ -305,7 +306,6 @@ void render::Window::prerender() {
 		// acquire the next image, signalling using the isImageAvailable semaphore
 		result = this->device.device.acquireNextImageKHR(this->swapchain, UINT64_MAX, this->isImageAvailable[this->framePingPong], {}, &this->currentFramebuffer);
 		if(result == vk::Result::eErrorOutOfDateKHR) {
-			console::print("the swapchain is out of date\n");
 			this->swapchainOutOfDate = true;
 			return;
 		}
@@ -395,7 +395,6 @@ void render::Window::render() {
 		vk::PresentInfoKHR presentInfo(1, signalSemaphores, 1, &this->swapchain, &this->currentFramebuffer, nullptr);
 		result = this->presentationQueue.presentKHR(&presentInfo);
 		if(result == vk::Result::eErrorOutOfDateKHR) {
-			console::print("the swapchain is out of date\n");
 			this->swapchainOutOfDate = true;
 			return;
 		}

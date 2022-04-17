@@ -36,7 +36,7 @@ render::VulkanPipelineResult render::VulkanPipeline::newPipeline() {
 		}
 
 		vk::PipelineInputAssemblyStateCreateInfo inputAssemblyInfo({}, primitiveToVulkanPrimitive(this->topology), false);
-		vk::Viewport viewport(0.0f, 0.0f, this->viewportWidth, this->viewportHeight, 0.0f, 1.0f);
+		vk::Viewport viewport(0.0f, this->viewportHeight, this->viewportWidth, -this->viewportHeight, 0.0f, 1.0f);
 		vk::Rect2D scissor({ 0, 0 }, this->window->swapchainExtent);
 
 		vk::PipelineViewportStateCreateInfo viewportStateInfo({}, 1, &viewport, 1, &scissor);

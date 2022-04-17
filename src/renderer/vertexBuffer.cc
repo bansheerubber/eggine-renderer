@@ -41,33 +41,75 @@ void render::VertexBuffer::setData(void* data, unsigned int size, unsigned int a
 	}
 	this->memoryAllocated = true;
 	#else
-	if(this->bufferId == GL_INVALID_INDEX) {
+	if(this->window->backend == OPENGL_BACKEND) {
+		if(this->bufferId == GL_INVALID_INDEX) {
+			this->destroyBuffer();
+			if(this->usage == GL_DYNAMIC_DRAW) {
+				this->usage = GL_DYNAMIC_DRAW;
+				glGenBuffers(1, &this->bufferId);
+				glBindBuffer(GL_ARRAY_BUFFER, this->bufferId);
+				glBufferData(GL_ARRAY_BUFFER, this->size, NULL, this->usage);
+
+				#ifdef RENDER_UNBIND_VERTEX_BUFFERS
+				glBindBuffer(GL_ARRAY_BUFFER, 0);
+				#endif
+			}
+			else {
+				this->usage = GL_STATIC_DRAW;
+				glGenBuffers(1, &this->bufferId);
+			}
+		}
+
 		if(this->usage == GL_DYNAMIC_DRAW) {
-			this->createDynamicBuffer();
+			glBindBuffer(GL_ARRAY_BUFFER, this->bufferId);
+			glBufferData(GL_ARRAY_BUFFER, this->size, NULL, this->usage); // orphan the buffer
+			glBufferSubData(GL_ARRAY_BUFFER, 0, this->size, data);
+
+			#ifdef RENDER_UNBIND_VERTEX_BUFFERS
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			#endif
 		}
 		else {
-			this->createBuffer();
+			glBindBuffer(GL_ARRAY_BUFFER, this->bufferId);
+			glBufferData(GL_ARRAY_BUFFER, this->size, data, this->usage);
+
+			#ifdef RENDER_UNBIND_VERTEX_BUFFERS
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			#endif
 		}
 	}
-
-	if(this->usage == GL_DYNAMIC_DRAW) {
-		glBindBuffer(GL_ARRAY_BUFFER, this->bufferId);
-		glBufferData(GL_ARRAY_BUFFER, this->size, NULL, this->usage); // orphan the buffer
-		glBufferSubData(GL_ARRAY_BUFFER, 0, this->size, data);
-
-		#ifdef RENDER_UNBIND_VERTEX_BUFFERS
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		#endif
-	}
 	else {
-		glBindBuffer(GL_ARRAY_BUFFER, this->bufferId);
-		glBufferData(GL_ARRAY_BUFFER, this->size, data, this->usage);
+		if(this->size != this->oldSize) {
+			this->destroyBuffer();
+			
+			vk::BufferCreateInfo bufferInfo(
+				{},
+				size,
+				vk::BufferUsageFlagBits::eVertexBuffer,
+				vk::SharingMode::eExclusive
+			);
 
-		#ifdef RENDER_UNBIND_VERTEX_BUFFERS
-		glBindBuffer(GL_ARRAY_BUFFER, 0);
-		#endif
+			this->buffer = this->window->device.device.createBuffer(bufferInfo);
+
+			vk::MemoryRequirements requirements = this->window->device.device.getBufferMemoryRequirements(this->buffer);
+			vk::MemoryAllocateInfo allocationInfo(
+				requirements.size,
+				this->window->findVulkanMemoryType(
+					requirements, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+				)
+			);
+			this->memory = this->window->device.device.allocateMemory(allocationInfo);
+
+			this->window->device.device.bindBufferMemory(this->buffer, this->memory, 0);
+		}
+
+		void* cpuMemory = this->window->device.device.mapMemory(this->memory, 0, this->size, {});
+		memcpy(cpuMemory, data, this->size);
+		this->window->device.device.unmapMemory(this->memory);
 	}
 	#endif
+
+	this->oldSize = this->size;
 }
 
 #ifdef __switch__
@@ -80,30 +122,6 @@ void render::VertexBuffer::bind() {
 }
 #endif
 
-void render::VertexBuffer::createBuffer() {
-	#ifndef __switch__
-	this->destroyBuffer();
-	
-	this->usage = GL_STATIC_DRAW;
-	glGenBuffers(1, &this->bufferId);
-	#endif
-}
-
-void render::VertexBuffer::createDynamicBuffer() {
-	#ifndef __switch__
-	this->destroyBuffer();
-	
-	this->usage = GL_DYNAMIC_DRAW;
-	glGenBuffers(1, &this->bufferId);
-	glBindBuffer(GL_ARRAY_BUFFER, this->bufferId);
-	glBufferData(GL_ARRAY_BUFFER, this->size, NULL, this->usage);
-
-	#ifdef RENDER_UNBIND_VERTEX_BUFFERS
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	#endif
-	#endif
-}
-
 void render::VertexBuffer::destroyBuffer() {
 	#ifdef __switch__
 	if(this->memory != nullptr) {
@@ -111,8 +129,17 @@ void render::VertexBuffer::destroyBuffer() {
 	}
 	this->memoryAllocated = false;
 	#else
-	if(this->bufferId != GL_INVALID_INDEX) {
-		glDeleteBuffers(1, &this->bufferId);
+	if(this->window->backend == OPENGL_BACKEND) {
+		if(this->bufferId != GL_INVALID_INDEX) {
+			glDeleteBuffers(1, &this->bufferId);
+		}
+	}
+	else {
+		if(this->oldSize != 0) {
+			this->window->device.device.destroyBuffer(this->buffer);
+			
+			this->window->device.device.freeMemory(this->memory);
+		}
 	}
 	#endif
 }

@@ -4,6 +4,7 @@
 
 #include <array>
 #include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <stdio.h>
 
@@ -61,16 +62,36 @@ int main(int argc, char* argv[]) {
 	render::State state = window.getState(0);
 
 	// vertices
+	glm::vec2 triangleVertices[] = {
+		glm::vec2(-0.5, 0.8),
+		glm::vec2(-0.5, -1.0),
+		glm::vec2(0.5, 0.8),
+		glm::vec2(0.5, -1.0),
+	};
+
+	render::VertexBuffer triangleBuffer(&window);
+	triangleBuffer.setData(triangleVertices, sizeof(triangleVertices), alignof(glm::vec2));
+
+	glm::vec3 triangleColors[] = {
+		glm::vec3(1.0, 0.0, 0.0),
+		glm::vec3(0.0, 1.0, 0.0),
+		glm::vec3(0.0, 0.0, 1.0),
+		glm::vec3(1.0, 0.0, 1.0),
+	};
+
+	render::VertexBuffer colorBuffer(&window);
+	colorBuffer.setData(triangleColors, sizeof(triangleColors), alignof(glm::vec3));
+
 	render::VertexAttributes triangleAttributes(&window);
-	triangleAttributes.addVertexAttribute((render::VertexBuffer*)0x1, 0, 2, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec2), 0);
-	triangleAttributes.addVertexAttribute((render::VertexBuffer*)0x2, 1, 2, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec2), 0);
+	triangleAttributes.addVertexAttribute(&triangleBuffer, 0, 2, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec2), 0);
+	triangleAttributes.addVertexAttribute(&colorBuffer, 1, 3, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec3), 0);
 
 	if(!window.getErrorCount()) {
-		for(unsigned int i = 0; i < 1; i++) {
+		for(unsigned int i = 0; i < 100000; i++) {
 			window.prerender();
 			state.bindVertexAttributes(&triangleAttributes);
 			state.bindProgram(simpleProgram);
-			state.draw(render::PRIMITIVE_TRIANGLE_STRIP, 0, 3, 0, 1);
+			state.draw(render::PRIMITIVE_TRIANGLE_STRIP, 0, 4, 0, 1);
 			window.render();
 		}
 	}
