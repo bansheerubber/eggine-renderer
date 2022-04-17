@@ -40,13 +40,13 @@ namespace render {
 			#else
 			GLuint bufferId = GL_INVALID_INDEX;
 			GLenum usage = GL_STATIC_DRAW;
-			unsigned int size = 0; // current size of the buffer
-			unsigned int oldSize = 0;
+			uint32_t size = 0; // current size of the buffer
 
 			vk::Buffer buffer;
 			vk::DeviceMemory memory;
+			#endif
+			uint32_t oldSize = 0;
 
 			void destroyBuffer();
-			#endif
 	};
 };

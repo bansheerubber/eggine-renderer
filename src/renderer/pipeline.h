@@ -1,12 +1,8 @@
 #pragma once
 
-#ifdef __switch__
-#include <deko3d.hpp>
-#include <switch.h>
-#else
+#ifndef __switch__
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.hpp>
-#endif
 
 #include "../util/hash.h"
 #include "primitive.h"
@@ -49,3 +45,4 @@ namespace std {
     }
 	};
 };
+#endif

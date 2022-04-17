@@ -149,7 +149,7 @@ void render::Window::initializeDeko3d() {
 
 	// create a buffer object for the command buffer
 	this->commandBuffer = dk::CmdBufMaker{this->device}.create();
-	this->commandBuffer.addMemory(this->commandBufferMemory, this->commandBufferSliceSize * this->currentCommandBuffer, this->commandBufferSliceSize);
+	this->commandBuffer.addMemory(this->commandBufferMemory, this->commandBufferSliceSize * this->framePingPong, this->commandBufferSliceSize);
 
 	// create a buffer object for the texture command buffer
 	this->textureCommandBufferMemory = dk::MemBlockMaker{this->device, 4 * 1024}.setFlags(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached).create();
@@ -273,7 +273,7 @@ void render::Window::prerender() {
 	// do dynamic command buffer magic
 	this->commandBuffer.clear();
 	this->commandBufferFences[this->signaledFence].wait();
-	this->commandBuffer.addMemory(this->commandBufferMemory, this->commandBufferSliceSize * this->currentCommandBuffer, this->commandBufferSliceSize);
+	this->commandBuffer.addMemory(this->commandBufferMemory, this->commandBufferSliceSize * this->framePingPong, this->commandBufferSliceSize);
 
 	// handle deallocated memory at the beginning of each frame
 	this->memory.processDeallocationLists();
@@ -354,11 +354,11 @@ void render::Window::render() {
 	this->queue.submitCommands(this->staticCommandList);
 
 	// do dynamic command buffer magic
-	this->commandBuffer.signalFence(this->commandBufferFences[this->currentCommandBuffer]);
-	this->signaledFence = this->currentCommandBuffer;
+	this->commandBuffer.signalFence(this->commandBufferFences[this->framePingPong]);
+	this->signaledFence = this->framePingPong;
 	this->queue.submitCommands(this->commandBuffer.finishList());
 
-	this->currentCommandBuffer = (this->currentCommandBuffer + 1) % this->commandBufferCount;
+	this->framePingPong = (this->framePingPong + 1) % this->commandBufferCount;
 
 	this->queue.presentImage(this->swapchain, index);
 	#else

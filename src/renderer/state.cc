@@ -6,6 +6,7 @@
 
 #include "../engine/console.h"
 #include "program.h"
+#include "shader.h"
 #include "vertexAttributes.h"
 #include "vertexBuffer.h"
 #include "window.h"
@@ -21,14 +22,18 @@ render::State::State(render::Window* window) {
 void render::State::reset() {
 	this->applied = false;
 
+	#ifdef __switch__
+	#else
 	if(this->window->backend != VULKAN_BACKEND) {
 		return;
 	}
 
 	this->buffer[this->window->framePingPong].reset();
+	#endif
 }
 
 void render::State::bindPipeline() {
+	#ifndef __switch__
 	if(this->window->backend != VULKAN_BACKEND || this->window->swapchainOutOfDate) {
 		return;
 	}
@@ -65,11 +70,15 @@ void render::State::bindPipeline() {
 
 		this->old = this->current;
 	}
+	#endif
 }
 
 void render::State::draw(PrimitiveType type, unsigned int firstVertex, unsigned int vertexCount, unsigned int firstInstance, unsigned int instanceCount) {
 	this->current.primitive = type;
 
+	#ifdef __switch__
+	this->window->commandBuffer.draw(primitiveToDkPrimitive(type), vertexCount, instanceCount, firstVertex, firstInstance);
+	#else
 	this->bindPipeline();
 	
 	if(this->window->backend == OPENGL_BACKEND) {
@@ -78,15 +87,31 @@ void render::State::draw(PrimitiveType type, unsigned int firstVertex, unsigned 
 	else if(!this->window->swapchainOutOfDate) {
 		this->buffer[this->window->framePingPong].draw(vertexCount, instanceCount, firstVertex, firstInstance);
 	}
+	#endif
 }
 
 void render::State::bindProgram(render::Program* program) {
 	this->current.program = program;
 	
+	#ifdef __switch__
+	std::vector<DkShader const*> shaders;
+	for(Shader* shader: program->shaders) {
+		shaders.push_back(&shader->shader);
+	}
+	
+	dkCmdBufBindShaders(this->window->commandBuffer, DkStageFlag_GraphicsMask, shaders.data(), shaders.size());
+
+	for(Shader* shader: program->shaders) {
+		for(auto &[uniform, binding]: shader->uniformToBinding) {
+			program->uniformToBinding[uniform] = binding;
+		}
+	}
+	#else
 	if(this->window->backend == OPENGL_BACKEND) {
 		program->compile();
 		glUseProgram(this->current.program->program);
 	}
+	#endif
 }
 
 void render::State::bindVertexAttributes(render::VertexAttributes* attributes) {
@@ -96,12 +121,16 @@ void render::State::bindVertexAttributes(render::VertexAttributes* attributes) {
 
 	#ifdef __switch__
 	unsigned short id = 0;
-	for(VertexBuffer* buffer: this->bufferBindOrder) {
+	for(VertexBuffer* buffer: attributes->bufferBindOrder) {
 		buffer->bind(id++);
 	}
 
-	this->window->commandBuffer.bindVtxAttribState(dk::detail::ArrayProxy(this->attributeStates.size(), (const DkVtxAttribState*)this->attributeStates.data()));
-	this->window->commandBuffer.bindVtxBufferState(dk::detail::ArrayProxy(this->bufferStates.size(), (const DkVtxBufferState*)this->bufferStates.data()));
+	this->window->commandBuffer.bindVtxAttribState(
+		dk::detail::ArrayProxy(attributes->attributeStates.size(), (const DkVtxAttribState*)attributes->attributeStates.data())
+	);
+	this->window->commandBuffer.bindVtxBufferState(
+		dk::detail::ArrayProxy(attributes->bufferStates.size(), (const DkVtxBufferState*)attributes->bufferStates.data())
+	);
 	#else
 	if(this->window->backend == OPENGL_BACKEND) {
 		glBindVertexArray(attributes->vertexArrayObject);

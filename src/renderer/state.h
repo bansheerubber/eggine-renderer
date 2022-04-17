@@ -80,7 +80,11 @@ namespace render {
 		private:
 			class Window* window = nullptr;
 
+			#ifdef __switch__
+			// TODO implement command buffers on state object for deko3d
+			#else
 			vk::CommandBuffer buffer[2];
+			#endif
 			
 			SubState current;
 			SubState old;

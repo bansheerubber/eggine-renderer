@@ -7,6 +7,7 @@
 #include <tsl/robin_map.h>
 #include <string>
 
+#ifndef __switch__
 inline std::string vkResultToString(VkResult result) {
 	switch(result) {
 		case VK_SUCCESS: return std::string("VK_SUCCESS");
@@ -76,3 +77,4 @@ inline VkBool32 vulkanDebugCallback(
 
   return VK_FALSE;
 }
+#endif

@@ -32,13 +32,14 @@ namespace std {
 
 namespace render {
 	class Program {
+		#ifndef __switch__
 		friend VulkanPipeline;
+		#endif
 		friend class State;
 		friend class Window;
 
 		public:
 			Program(class Window* window);
-			void bind();
 			void compile();
 			void addShader(class Shader* shader);
 			void bindUniform(std::string uniformNamde, void* data, unsigned int size, uint64_t cacheIndex = 0, bool setOnce = false);

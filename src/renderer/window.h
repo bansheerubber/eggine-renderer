@@ -66,7 +66,9 @@ namespace render {
 		// friend LiteHTMLContainer;
 		friend class Shader;
 		friend class Program;
+		#ifndef __switch__
 		friend VulkanPipeline;
+		#endif
 		
 		public:
 			double deltaTime = 0.0;
@@ -129,8 +131,10 @@ namespace render {
 			// litehtml::context htmlContext;
 			uint64_t htmlChecksum = 0;
 			uint64_t lastHTMLChecksum = 0;
+			uint32_t framePingPong = 0;
 
 			std::vector<class Program*> programs;
+			tsl::robin_map<uint32_t, State> renderStates;
 
 			#ifdef __switch__
 			switch_memory::Piece* imageDescriptorMemory;
@@ -172,8 +176,6 @@ namespace render {
 
 			void initializeDeko3d();
 			#else
-			tsl::robin_map<uint32_t, State> renderStates;
-			
 			vk::Instance instance;
 			vk::SurfaceKHR surface;
 			vk::Queue graphicsQueue;
@@ -186,7 +188,6 @@ namespace render {
 			vk::RenderPass renderPass;
 			std::vector<vk::Framebuffer> framebuffers;
 			uint32_t currentFramebuffer;
-			uint32_t framePingPong = 0;
 
 			std::vector<vk::Image> renderImages;
 			std::vector<vk::ImageView> renderImageViews;

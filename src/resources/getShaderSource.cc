@@ -8,19 +8,19 @@
 
 resources::ShaderSource* getShaderSource(render::Window* window, std::string fileName) {
 	bool binary = false;
+	std::string extension = "";
 	#ifdef __switch__
-	fileName += ".dksh";
+	extension = ".dksh";
 	binary = true;
-	#endif
-	
+	#else
 	if(window->backend == render::VULKAN_BACKEND) {
-		fileName += ".spv";
+		extension = ".spv";
 		binary = true;
 	}
+	#endif
 
 	// oh boy
-	#ifndef __switch__
-	std::ifstream file(fileName);
+	std::ifstream file(fileName + extension);
 	if(file.bad() || file.fail()) {
 		console::error("couldn't load shader\n");
 		return nullptr;
@@ -37,7 +37,7 @@ resources::ShaderSource* getShaderSource(render::Window* window, std::string fil
 	delete[] buffer;
 
 	if(binary) {
-		std::ifstream file2(fileName.replace(fileName.size() - 4, fileName.size(), ""));
+		std::ifstream file2(fileName);
 		if(file2.bad() || file2.fail()) {
 			console::error("couldn't load original\n");
 			return nullptr;
@@ -50,12 +50,9 @@ resources::ShaderSource* getShaderSource(render::Window* window, std::string fil
 		file2.read((char*)buffer2, length2);
 		file2.close();
 
-		source->original = new resources::ShaderSource((const unsigned char*)buffer2, length);
+		source->original = new resources::ShaderSource((const unsigned char*)buffer2, length2);
 		delete[] buffer2;
 	}
 
 	return source;
-	#endif
-
-	return nullptr;
 }

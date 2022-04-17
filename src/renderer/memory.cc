@@ -181,9 +181,9 @@ void render::switch_memory::Page::combinePieces() {
 }
 
 void render::switch_memory::Page::print() {
-	string flags = "";
+	std::string flags = "";
 
-	string enumNames[11] = { "DkMemBlockFlags_CpuAccessShift", "DkMemBlockFlags_GpuAccessShift", "DkMemBlockFlags_CpuUncached", "DkMemBlockFlags_CpuCached", "DkMemBlockFlags_GpuUncached", "DkMemBlockFlags_GpuCached", "DkMemBlockFlags_Code", "DkMemBlockFlags_Image", "DkMemBlockFlags_ZeroFillInit" };
+	std::string enumNames[11] = { "DkMemBlockFlags_CpuAccessShift", "DkMemBlockFlags_GpuAccessShift", "DkMemBlockFlags_CpuUncached", "DkMemBlockFlags_CpuCached", "DkMemBlockFlags_GpuUncached", "DkMemBlockFlags_GpuCached", "DkMemBlockFlags_Code", "DkMemBlockFlags_Image", "DkMemBlockFlags_ZeroFillInit" };
 	uint32_t enums[11] = { DkMemBlockFlags_CpuAccessShift, DkMemBlockFlags_GpuAccessShift, DkMemBlockFlags_CpuUncached, DkMemBlockFlags_CpuCached, DkMemBlockFlags_GpuUncached, DkMemBlockFlags_GpuCached, DkMemBlockFlags_Code, DkMemBlockFlags_Image, DkMemBlockFlags_ZeroFillInit };
 
 	for(int i = 0; i < 11; i++) {

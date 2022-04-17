@@ -33,6 +33,9 @@ int main(int argc, char* argv[]) {
 	if(R_FAILED(res)) {
 		return 0;
 	}
+
+	socketInitializeDefault();
+	int nxlink = nxlinkStdio();
 	#endif
 
 	std::string filePrefix = "romfs/";
@@ -89,8 +92,8 @@ int main(int argc, char* argv[]) {
 	if(!window.getErrorCount()) {
 		for(unsigned int i = 0; i < 100000; i++) {
 			window.prerender();
-			state.bindVertexAttributes(&triangleAttributes);
 			state.bindProgram(simpleProgram);
+			state.bindVertexAttributes(&triangleAttributes);
 			state.draw(render::PRIMITIVE_TRIANGLE_STRIP, 0, 4, 0, 1);
 			window.render();
 		}
@@ -98,6 +101,8 @@ int main(int argc, char* argv[]) {
 
 	#ifdef __switch__
 	romfsExit();
+	close(nxlink);
+	socketExit();
 	#endif
 
 	window.deinitialize();

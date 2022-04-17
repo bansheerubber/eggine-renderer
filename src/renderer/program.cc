@@ -20,6 +20,7 @@ render::Program::Program(Window* window) {
 void render::Program::addShader(Shader* shader) {
 	this->shaders.push_back(shader);
 
+	#ifndef __switch__
 	if(this->window->backend == VULKAN_BACKEND) {
 		this->stages[shader->type == SHADER_VERTEX ? 0 : 1] = vk::PipelineShaderStageCreateInfo(
 			{},
@@ -28,9 +29,11 @@ void render::Program::addShader(Shader* shader) {
 			"main"
 		);
 	}
+	#endif
 }
 
 void render::Program::compile() {
+	#ifndef __switch__
 	if(this->window->backend == OPENGL_BACKEND) {
 		if(this->program == GL_INVALID_INDEX) {
 			GLuint program = glCreateProgram();
@@ -82,27 +85,6 @@ void render::Program::compile() {
 				UniformCount += shader->uniformToBinding.size();
 			}
 		}
-	}
-}
-
-void render::Program::bind() {
-	#ifdef __switch__
-	vector<DkShader const*> shaders;
-	for(Shader* shader: this->shaders) {
-		shaders.push_back(&shader->shader);
-	}
-	
-	dkCmdBufBindShaders(this->window->commandBuffer, DkStageFlag_GraphicsMask, shaders.data(), shaders.size());
-
-	for(Shader* shader: this->shaders) {
-		for(auto &[uniform, binding]: shader->uniformToBinding) {
-			this->uniformToBinding[uniform] = binding;
-		}
-	}
-	#else
-	if(this->window->backend == OPENGL_BACKEND) {
-		this->compile();
-		glUseProgram(this->program);
 	}
 	#endif
 }
@@ -166,7 +148,7 @@ void render::Program::bindTexture(std::string uniformName, unsigned int texture)
 }
 
 #ifdef __switch__
-void render::Program::createUniformMemory(string uniformName, unsigned int size) {
+void render::Program::createUniformMemory(std::string uniformName, unsigned int size) {
 	this->uniformToPiece[uniformName] = this->window->memory.allocate(
 		DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached, size, DK_UNIFORM_BUF_ALIGNMENT
 	);

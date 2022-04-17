@@ -46,7 +46,6 @@ void render::Shader::load(resources::ShaderSource* source, ShaderType type) {
 	
 	#ifdef __switch__
 	const char* buffer = (const char*)source->buffer;
-	uint64_t length = source->bufferSize;
 
 	DkshHeader header {
 		magic: 0,
@@ -63,7 +62,7 @@ void render::Shader::load(resources::ShaderSource* source, ShaderType type) {
 		return;
 	}
 
-	vector<char> controlBuffer(header.controlSize);
+	std::vector<char> controlBuffer(header.controlSize);
 	memcpy(controlBuffer.data(), buffer, header.controlSize);
 
 	this->memory = this->window->memory.allocate(
@@ -81,7 +80,7 @@ void render::Shader::load(resources::ShaderSource* source, ShaderType type) {
 	
 	if(!this->shader.isValid()) {
 		console::error("shader not valid\n");
-		exit(1);
+		return;
 	}
 	#else
 	const char* buffer = (const char*)source->buffer;

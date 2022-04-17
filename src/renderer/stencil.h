@@ -20,7 +20,7 @@ namespace render {
 		STENCIL_ALWAYS,
 	};
 
-	#ifdef __switch
+	#ifdef __switch__
 	#else
 	inline GLenum stencilToGLStencil(StencilFunction type) {
 		switch(type) {

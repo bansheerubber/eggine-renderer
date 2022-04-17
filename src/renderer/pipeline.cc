@@ -1,3 +1,4 @@
+#ifndef __switch__
 #include "pipeline.h"
 
 #include "program.h"
@@ -107,3 +108,4 @@ render::VulkanPipelineResult render::VulkanPipeline::newPipeline() {
 
 	return output;
 }
+#endif
