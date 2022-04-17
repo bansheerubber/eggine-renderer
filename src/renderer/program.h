@@ -10,8 +10,8 @@
 #include <string>
 #include <vector>
 
-#include "pipeline.h"
-#include "memory.h"
+#include "vulkanPipeline.h"
+#include "deko3dMemory.h"
 
 namespace std {
 	template<>

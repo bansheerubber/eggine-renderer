@@ -7,7 +7,8 @@
 #include <vulkan/vulkan.hpp>
 #endif
 
-#include "memory.h"
+#include "deko3dMemory.h"
+#include "vulkanMemory.h"
 
 #define RENDER_UNBIND_VERTEX_BUFFERS
 
@@ -42,8 +43,7 @@ namespace render {
 			GLenum usage = GL_STATIC_DRAW;
 			uint32_t size = 0; // current size of the buffer
 
-			vk::Buffer buffer;
-			vk::DeviceMemory memory;
+			VulkanBuffer buffer;
 			#endif
 			uint32_t oldSize = 0;
 

@@ -20,13 +20,14 @@
 #include "../util/crop.h"
 // TODO re-enable in eggine repo
 // #include "../renderer/litehtmlContainer.h"
-#include "memory.h"
-#include "pipeline.h"
+#include "deko3dMemory.h"
 #include "../util/png.h"
 #include "primitive.h"
 #include "state.h"
 #include "texture.h"
 #include "../util/time.h"
+#include "vulkanMemory.h"
+#include "vulkanPipeline.h"
 
 #include "stencil.h"
 
@@ -210,6 +211,7 @@ namespace render {
 			void initializeVulkan();
 
 			uint32_t findVulkanMemoryType(vk::MemoryRequirements requirements, vk::MemoryPropertyFlags propertyFlags);
+			VulkanBuffer allocateBuffer(vk::BufferCreateInfo &bufferInfo, vk::MemoryPropertyFlags propertyFlags);
 			#endif
 	};
 };

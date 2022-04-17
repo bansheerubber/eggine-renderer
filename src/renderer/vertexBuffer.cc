@@ -89,23 +89,13 @@ void render::VertexBuffer::setData(void* data, unsigned int size, unsigned int a
 				vk::SharingMode::eExclusive
 			);
 
-			this->buffer = this->window->device.device.createBuffer(bufferInfo);
-
-			vk::MemoryRequirements requirements = this->window->device.device.getBufferMemoryRequirements(this->buffer);
-			vk::MemoryAllocateInfo allocationInfo(
-				requirements.size,
-				this->window->findVulkanMemoryType(
-					requirements, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
-				)
+			this->buffer = this->window->allocateBuffer(
+				bufferInfo, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
 			);
-			this->memory = this->window->device.device.allocateMemory(allocationInfo);
-
-			this->window->device.device.bindBufferMemory(this->buffer, this->memory, 0);
 		}
 
-		void* cpuMemory = this->window->device.device.mapMemory(this->memory, 0, this->size, {});
-		memcpy(cpuMemory, data, this->size);
-		this->window->device.device.unmapMemory(this->memory);
+		memcpy(this->buffer.map(), data, this->size);
+		this->buffer.unmap();
 	}
 	#endif
 
@@ -136,9 +126,7 @@ void render::VertexBuffer::destroyBuffer() {
 	}
 	else {
 		if(this->oldSize != 0) {
-			this->window->device.device.destroyBuffer(this->buffer);
-			
-			this->window->device.device.freeMemory(this->memory);
+			this->buffer.destroy();
 		}
 	}
 	#endif

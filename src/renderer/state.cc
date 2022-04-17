@@ -62,7 +62,7 @@ void render::State::bindPipeline() {
 		std::vector<vk::Buffer> vertexBuffers;
 		std::vector<vk::DeviceSize> offsets;
 		for(VertexAttribute attribute: this->current.attributes->attributes) {
-			vertexBuffers.push_back(attribute.buffer->buffer);
+			vertexBuffers.push_back(attribute.buffer->buffer.getBuffer());
 			offsets.push_back(0);
 		}
 

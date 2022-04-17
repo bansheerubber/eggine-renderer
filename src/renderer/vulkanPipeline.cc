@@ -1,5 +1,5 @@
 #ifndef __switch__
-#include "pipeline.h"
+#include "vulkanPipeline.h"
 
 #include "program.h"
 #include "vertexAttributes.h"

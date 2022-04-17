@@ -9,7 +9,7 @@
 
 #include <vector>
 
-#include "memory.h"
+#include "deko3dMemory.h"
 
 namespace render {
 	enum VertexAttributeType {

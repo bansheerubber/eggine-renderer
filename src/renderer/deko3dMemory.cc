@@ -1,5 +1,5 @@
 #ifdef __switch__
-#include "memory.h"
+#include "deko3dMemory.h"
 
 #include <string>
 

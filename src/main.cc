@@ -15,7 +15,7 @@
 #include "renderer/vertexBuffer.h"
 #include "renderer/window.h"
 
-#include "renderer/memory.h"
+#include "renderer/deko3dMemory.h"
 
 #include "resources/getShaderSource.h"
 

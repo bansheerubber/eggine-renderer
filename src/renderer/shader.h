@@ -11,7 +11,7 @@
 #include "../resources/shaderSource.h"
 #include <string>
 
-#include "memory.h"
+#include "deko3dMemory.h"
 
 namespace render {
 	enum ShaderType {

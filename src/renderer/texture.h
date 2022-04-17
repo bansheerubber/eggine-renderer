@@ -2,7 +2,7 @@
 
 #if __switch__
 #include <deko3d.hpp>
-#include "memory.h"
+#include "deko3dMemory.h"
 #else
 #include <GLFW/glfw3.h>
 #endif
