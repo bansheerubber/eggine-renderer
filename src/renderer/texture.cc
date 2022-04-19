@@ -93,7 +93,7 @@ void render::Texture::load(
 	this->samplerDescriptorMemory = this->window->memory.allocate(DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached, sizeof(DkSamplerDescriptor), DK_SAMPLER_DESCRIPTOR_ALIGNMENT);
 	
 	// allocate memory for the image, we will be deallocating this later though
-	switch_memory::Piece* memory = this->window->memory.allocate(
+	Piece* memory = this->window->memory.allocate(
 		DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached,
 		bufferSize,
 		DK_IMAGE_LINEAR_STRIDE_ALIGNMENT

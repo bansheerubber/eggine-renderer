@@ -2,7 +2,7 @@
 
 #if __switch__
 #include <deko3d.hpp>
-#include "deko3dMemory.h"
+#include "memory.h"
 #else
 #include <GLFW/glfw3.h>
 #endif
@@ -276,10 +276,10 @@ namespace render {
 			dk::ImageDescriptor imageDescriptor;
 			dk::Sampler sampler;
 			dk::SamplerDescriptor samplerDescriptor;
-			switch_memory::Piece* memory;
+			Piece* memory;
 
-			switch_memory::Piece* imageDescriptorMemory;
-			switch_memory::Piece* samplerDescriptorMemory;
+			Piece* imageDescriptorMemory;
+			Piece* samplerDescriptorMemory;
 			#else
 			GLuint texture = GL_INVALID_INDEX;
 			#endif

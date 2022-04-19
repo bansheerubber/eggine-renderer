@@ -136,7 +136,7 @@ void render::Program::createDescriptorSet() {
 
 	std::vector<vk::WriteDescriptorSet> writes;
 	for(auto &[uniform, binding]: this->uniformToShaderBinding) {
-		vk::DescriptorBufferInfo bufferInfo(this->uniformToVulkanBuffer[uniform].getBuffer(), 0, VK_WHOLE_SIZE);
+		vk::DescriptorBufferInfo bufferInfo(this->uniformToVulkanBuffer[uniform]->getBuffer(), 0, VK_WHOLE_SIZE);
 		vk::WriteDescriptorSet descriptorWrite(
 			this->descriptorSet, binding, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &bufferInfo, nullptr
 		);
@@ -164,7 +164,7 @@ void render::Program::createUniformBuffer(std::string uniformName, unsigned int 
 		glBindBufferBase(GL_UNIFORM_BUFFER, this->uniformToBinding.find(uniformName).value(), bufferId);
 	}
 	else if(this->window->backend == VULKAN_BACKEND) {
-		this->uniformToVulkanBuffer[uniformName] = this->window->allocateVulkanBuffer(
+		this->uniformToVulkanBuffer[uniformName] = this->window->memory.allocate(
 			vk::BufferCreateInfo(
 				{},
 				size,

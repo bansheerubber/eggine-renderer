@@ -104,8 +104,7 @@ void render::State::bindUniform(std::string uniformName, void* data, uint32_t si
 			found = this->current.program->uniformToVulkanBuffer.find(uniformName);
 		}
 		
-		memcpy(found.value().map(), data, size);
-		found.value().unmap();
+		memcpy(found.value()->map(), data, size);
 	}
 	#endif
 }
@@ -192,8 +191,8 @@ void render::State::bindPipeline() {
 				this->window->copyVulkanBuffer(attribute.buffer->stagingBuffer, attribute.buffer->gpuBuffer);
 				attribute.buffer->needsCopy = false;
 			}
-			
-			vertexBuffers.push_back(attribute.buffer->gpuBuffer.getBuffer());
+
+			vertexBuffers.push_back(attribute.buffer->gpuBuffer->buffer);
 			offsets.push_back(0);
 		}
 

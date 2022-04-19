@@ -446,7 +446,7 @@ void render::Window::resize(unsigned int width, unsigned int height) {
 }
 
 #ifdef __switch__
-void render::Window::addTexture(switch_memory::Piece* tempMemory, dk::ImageView& view, unsigned int width, unsigned int height) {
+void render::Window::addTexture(Piece* tempMemory, dk::ImageView& view, unsigned int width, unsigned int height) {
 	this->queue.waitIdle();
 	this->textureCommandBuffer.clear();
 	this->textureCommandBuffer.addMemory(this->textureCommandBufferMemory, 0, 4 * 1024);

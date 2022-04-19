@@ -1,6 +1,7 @@
 #ifndef __switch__
 #include "vulkanMemory.h"
 
+#include "memory.h"
 #include "window.h"
 #include "debug.h"
 
@@ -30,7 +31,7 @@ render::VulkanBuffer render::Window::allocateVulkanBuffer(vk::BufferCreateInfo b
 	return buffer;
 }
 
-void render::Window::copyVulkanBuffer(render::VulkanBuffer source, render::VulkanBuffer destination) {
+void render::Window::copyVulkanBuffer(Piece* source, Piece* destination) {
 	// create a new fence for this operation
 	vk::FenceCreateInfo fenceInfo;
 	vk::Fence fence = this->device.device.createFence(fenceInfo);
@@ -44,8 +45,8 @@ void render::Window::copyVulkanBuffer(render::VulkanBuffer source, render::Vulka
 	vk::CommandBufferBeginInfo beginInfo(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 	commandBuffer.begin(beginInfo);
 
-	vk::BufferCopy copyInfo(0, 0, source.size);
-	commandBuffer.copyBuffer(source.buffer, destination.buffer, 1, &copyInfo);
+	vk::BufferCopy copyInfo(0, 0, source->bufferSize);
+	commandBuffer.copyBuffer(source->buffer, destination->buffer, 1, &copyInfo);
 
 	commandBuffer.end();
 

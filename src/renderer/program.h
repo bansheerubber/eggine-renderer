@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "deko3dMemory.h"
+#include "memory.h"
 #include "vulkanMemory.h"
 #include "vulkanPipeline.h"
 
@@ -52,11 +52,11 @@ namespace render {
 			tsl::robin_map<std::string, unsigned int> uniformToBinding;
 
 			#ifdef __switch__
-			tsl::robin_map<std::string, switch_memory::Piece*> uniformToPiece;
+			tsl::robin_map<std::string, Piece*> uniformToPiece;
 			#else
 			GLuint program = GL_INVALID_INDEX;
 			tsl::robin_map<std::string, GLuint> uniformToBuffer;
-			tsl::robin_map<std::string, VulkanBuffer> uniformToVulkanBuffer;
+			tsl::robin_map<std::string, Piece*> uniformToVulkanBuffer;
 			tsl::robin_map<std::string, uint32_t> uniformToShaderBinding;
 
 			std::vector<vk::PipelineShaderStageCreateInfo> stages = std::vector<vk::PipelineShaderStageCreateInfo>(2);

@@ -85,7 +85,7 @@ void render::VertexBuffer::setData(void* data, unsigned int size, unsigned int a
 			this->destroyBuffer();
 			
 			if(this->isDynamicDraw) { // do not use staging buffer if we're dynamic draw
-				this->gpuBuffer = this->window->allocateVulkanBuffer(
+				this->gpuBuffer = this->window->memory.allocate(
 					vk::BufferCreateInfo(
 						{},
 						size,
@@ -96,7 +96,7 @@ void render::VertexBuffer::setData(void* data, unsigned int size, unsigned int a
 				);
 			}
 			else {
-				this->stagingBuffer = this->window->allocateVulkanBuffer(
+				this->stagingBuffer = this->window->memory.allocate(
 					vk::BufferCreateInfo(
 						{},
 						size,
@@ -106,7 +106,7 @@ void render::VertexBuffer::setData(void* data, unsigned int size, unsigned int a
 					vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
 				);
 				
-				this->gpuBuffer = this->window->allocateVulkanBuffer(
+				this->gpuBuffer = this->window->memory.allocate(
 					vk::BufferCreateInfo(
 						{},
 						size,
@@ -119,12 +119,10 @@ void render::VertexBuffer::setData(void* data, unsigned int size, unsigned int a
 		}
 
 		if(this->isDynamicDraw) {
-			memcpy(this->gpuBuffer.map(), data, this->size);
-			this->gpuBuffer.unmap();
+			memcpy(this->gpuBuffer->map(), data, this->size);
 		}
 		else {
-			memcpy(this->stagingBuffer.map(), data, this->size);
-			this->stagingBuffer.unmap();
+			memcpy(this->stagingBuffer->map(), data, this->size);
 			this->needsCopy = true;
 		}
 	}
@@ -157,8 +155,13 @@ void render::VertexBuffer::destroyBuffer() {
 	}
 	else {
 		if(this->oldSize != 0) {
-			this->stagingBuffer.destroy();
-			this->gpuBuffer.destroy();
+			if(this->stagingBuffer != nullptr) {
+				this->stagingBuffer->deallocate();
+			}
+			
+			if(this->gpuBuffer != nullptr) {
+				this->gpuBuffer->deallocate();
+			}
 		}
 	}
 	#endif

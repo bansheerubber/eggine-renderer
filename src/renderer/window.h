@@ -20,7 +20,7 @@
 #include "../util/crop.h"
 // TODO re-enable in eggine repo
 // #include "../renderer/litehtmlContainer.h"
-#include "deko3dMemory.h"
+#include "memory.h"
 #include "../util/png.h"
 #include "primitive.h"
 #include "state.h"
@@ -94,8 +94,9 @@ namespace render {
 
 			State &getState(uint32_t id); // get a render state, potentially allocate a new one
 
+			Manager memory = Manager(this);
+
 			#ifdef __switch__
-			switch_memory::Manager memory = switch_memory::Manager(this);
 			dk::UniqueDevice device;
 			dk::CmdBuf commandBuffer;
 
@@ -103,7 +104,7 @@ namespace render {
 			HidAnalogStickState rightStick;
 			uint64_t buttons;
 
-			void addTexture(switch_memory::Piece* tempMemory, dk::ImageView& view, unsigned int width, unsigned int height);
+			void addTexture(Piece* tempMemory, dk::ImageView& view, unsigned int width, unsigned int height);
 			void bindTexture(unsigned int location, class Texture* texture);
 			#else
 			GLFWwindow* window = nullptr;
@@ -117,7 +118,7 @@ namespace render {
 			#ifdef __switch__
 			RenderBackend backend = DEKO_BACKEND;
 			#else
-			RenderBackend backend = OPENGL_BACKEND;
+			RenderBackend backend = VULKAN_BACKEND;
 			#endif
 
 		protected:
@@ -138,8 +139,8 @@ namespace render {
 			tsl::robin_map<uint32_t, State> renderStates;
 
 			#ifdef __switch__
-			switch_memory::Piece* imageDescriptorMemory;
-			switch_memory::Piece* samplerDescriptorMemory;
+			Piece* imageDescriptorMemory;
+			Piece* samplerDescriptorMemory;
 			
 			dk::MemBlock commandBufferMemory;
 			unsigned int commandBufferSize = 1024 * 1024; // 1 MB
@@ -213,7 +214,7 @@ namespace render {
 
 			uint32_t findVulkanMemoryType(vk::MemoryRequirements requirements, vk::MemoryPropertyFlags propertyFlags);
 			VulkanBuffer allocateVulkanBuffer(vk::BufferCreateInfo bufferInfo, vk::MemoryPropertyFlags propertyFlags);
-			void copyVulkanBuffer(render::VulkanBuffer source, render::VulkanBuffer destination);
+			void copyVulkanBuffer(Piece* source, Piece* destination);
 
 			std::vector<vk::Fence> memoryCopyFences;
 			std::vector<vk::CommandBuffer> memoryCopyCommandBuffers;

@@ -11,7 +11,7 @@
 #include "../resources/shaderSource.h"
 #include <string>
 
-#include "deko3dMemory.h"
+#include "memory.h"
 
 namespace render {
 	enum ShaderType {
@@ -37,7 +37,7 @@ namespace render {
 			ShaderType type;
 
 			#ifdef __switch__
-			switch_memory::Piece* memory = nullptr;
+			Piece* memory = nullptr;
 			dk::Shader shader;
 			#else
 			GLuint shader = GL_INVALID_INDEX;

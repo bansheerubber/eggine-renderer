@@ -7,7 +7,7 @@
 #include <vulkan/vulkan.hpp>
 #endif
 
-#include "deko3dMemory.h"
+#include "memory.h"
 #include "vulkanMemory.h"
 
 #define RENDER_UNBIND_VERTEX_BUFFERS
@@ -35,7 +35,7 @@ namespace render {
 		protected:
 			#ifdef __switch__
 			bool memoryAllocated = false;
-			switch_memory::Piece* memory = nullptr;
+			Piece* memory = nullptr;
 			uint32_t size = 0;
 			uint32_t align = 0;
 			#else
@@ -43,8 +43,8 @@ namespace render {
 			GLenum usage = GL_STATIC_DRAW;
 			uint32_t size = 0; // current size of the buffer
 
-			VulkanBuffer stagingBuffer;
-			VulkanBuffer gpuBuffer;
+			Piece* stagingBuffer = nullptr;
+			Piece* gpuBuffer = nullptr;
 
 			bool isDynamicDraw = false;
 
