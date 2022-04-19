@@ -94,6 +94,12 @@ void render::Window::initializeVulkan() {
 		this->isImageAvailable[i] = this->device.device.createSemaphore(semaphoreInfo);
 		this->isRenderFinished[i] = this->device.device.createSemaphore(semaphoreInfo);
 	}
+
+	// create descriptor pool
+	std::vector<vk::DescriptorPoolSize> poolSizes;
+	poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eUniformBuffer, 1)); // TODO change to 2, also maybe revisit for textures?
+	vk::DescriptorPoolCreateInfo descriptorInfo({}, 1, (uint32_t)poolSizes.size(), poolSizes.data()); // also change 1 to 2
+	this->descriptorPool = this->device.device.createDescriptorPool(descriptorInfo);
 }
 
 void render::Window::createSwapchain() {

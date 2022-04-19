@@ -9,6 +9,7 @@
 #endif
 
 #include <cstdint>
+#include <string>
 
 #include "primitive.h"
 #include "stencil.h"
@@ -67,6 +68,7 @@ namespace render {
 			void draw(PrimitiveType type, unsigned int firstVertex, unsigned int vertexCount, unsigned int firstInstance, unsigned int instanceCount);
 
 			void bindProgram(class Program* program);
+			void bindUniform(std::string uniformName, void* data, uint32_t size);
 			void bindVertexAttributes(class VertexAttributes* attributes);
 
 			void setStencilFunction(StencilFunction func, unsigned int reference, unsigned int mask);

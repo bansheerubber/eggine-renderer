@@ -27,6 +27,10 @@ namespace render {
 				return this->buffer;
 			}
 
+			inline vk::DeviceSize getSize() {
+				return this->size;
+			}
+
 		private:
 			class Window* window = nullptr;
 			

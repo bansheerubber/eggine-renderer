@@ -15,7 +15,13 @@ render::VulkanPipelineResult render::VulkanPipeline::newPipeline() {
 
 	// handle pipeline layout
 	{
-		vk::PipelineLayoutCreateInfo pipelineLayoutInfo({}, 0, nullptr, 0, nullptr);
+		std::vector<vk::DescriptorSetLayout> descriptorLayouts;
+		descriptorLayouts.push_back(this->program->descriptorLayout);
+		
+		vk::PipelineLayoutCreateInfo pipelineLayoutInfo(
+			{}, descriptorLayouts.size(), descriptorLayouts.data(), 0, nullptr
+		);
+
 		vk::Result result = this->window->device.device.createPipelineLayout(&pipelineLayoutInfo, nullptr, output.layout); // TODO remember to clean up
 		if(result != vk::Result::eSuccess) {
 			console::error("vulkan: could not create pipeline layout: %s\n", vkResultToString((VkResult)result).c_str());

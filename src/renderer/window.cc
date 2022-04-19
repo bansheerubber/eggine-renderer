@@ -254,6 +254,7 @@ void render::Window::deinitialize() {
 		}
 
 		this->device.device.destroyCommandPool(this->commandPool);
+		this->device.device.destroyDescriptorPool(this->descriptorPool);
 
 		this->device.device.destroy();
 

@@ -108,6 +108,17 @@ int main(int argc, char* argv[]) {
 			triangleBuffer.setData(triangleVertices, sizeof(triangleVertices), alignof(glm::vec2));
 
 			state.bindProgram(simpleProgram);
+
+			{
+				struct VertexBlock {
+					alignas(8) glm::vec2 offset;
+					alignas(16) glm::vec4 color;
+				} vb;
+				vb.offset = glm::vec2(0, 0.5);
+				vb.color = glm::vec4(0, 1, 1, 1);
+				state.bindUniform("data", &vb, sizeof(vb));
+			}
+
 			state.bindVertexAttributes(&triangleAttributes);
 			state.draw(render::PRIMITIVE_TRIANGLE_STRIP, 0, 4, 0, 1);
 

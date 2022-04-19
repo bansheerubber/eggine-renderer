@@ -196,6 +196,7 @@ namespace render {
 			tsl::robin_map<VulkanPipeline, VulkanPipelineResult> pipelineCache;
 
 			vk::CommandPool commandPool;
+			vk::DescriptorPool descriptorPool;
 
 			vk::Fence frameFence[2];
 			vk::Semaphore isImageAvailable[2];

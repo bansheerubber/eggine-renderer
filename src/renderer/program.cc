@@ -68,69 +68,47 @@ void render::Program::compile() {
 			}
 			else {
 				this->program = program;
-			}
+				this->compiled = true;
 
-			for(Shader* shader: this->shaders) {
-				glDetachShader(program, shader->shader);
+				for(Shader* shader: this->shaders) {
+					glDetachShader(program, shader->shader);
 
-				// handle uniform block bindings (reconcile differences between deko3d and opengl)
-				for(auto &[uniform, binding]: shader->uniformToBinding) {
-					// update shader binding for opengl
-					GLuint blockIndex = glGetUniformBlockIndex(this->program, uniform.c_str());
-					if(blockIndex != GL_INVALID_INDEX) {
-						glUniformBlockBinding(this->program, blockIndex, binding + UniformCount);
-						this->uniformToBinding[uniform] = binding + UniformCount;
+					// handle uniform block bindings (reconcile differences between deko3d and opengl)
+					for(auto &[uniform, binding]: shader->uniformToBinding) {
+						// update shader binding for opengl
+						GLuint blockIndex = glGetUniformBlockIndex(this->program, uniform.c_str());
+						if(blockIndex != GL_INVALID_INDEX) {
+							glUniformBlockBinding(this->program, blockIndex, binding + UniformCount);
+							this->uniformToBinding[uniform] = binding + UniformCount;
+						}
 					}
+					UniformCount += shader->uniformToBinding.size();
 				}
-				UniformCount += shader->uniformToBinding.size();
 			}
 		}
 	}
-	#endif
-}
+	else if(!this->compiled) {
+		std::vector<vk::DescriptorSetLayoutBinding> bindings;
+		for(Shader* shader: this->shaders) {
+			for(auto &[uniform, binding]: shader->uniformToBinding) {
+				bindings.push_back(vk::DescriptorSetLayoutBinding(
+					binding,
+					vk::DescriptorType::eUniformBuffer,
+					1,
+					vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
+					nullptr
+				));
 
-void render::Program::bindUniform(std::string uniformName, void* data, unsigned int size, uint64_t cacheIndex, bool setOnce) {
-	#ifdef __switch__
-	if(this->uniformToPiece.find(uniformName) == this->uniformToPiece.end()) {
-		this->createUniformMemory(uniformName, size);
-	}
-
-	this->window->commandBuffer.pushConstants(
-		this->uniformToPiece[uniformName]->gpuAddr(),
-		this->uniformToPiece[uniformName]->size(),
-		0,
-		size,
-		data
-	);
-
-	// look for binding
-	for(Shader* shader: this->shaders) {
-		if(shader->uniformToBinding.find(uniformName) != shader->uniformToBinding.end()) {
-			this->window->commandBuffer.bindUniformBuffer(
-				shader->type == SHADER_FRAGMENT ? DkStage_Fragment : DkStage_Vertex,
-				shader->uniformToBinding[uniformName],
-				this->uniformToPiece[uniformName]->gpuAddr(),
-				this->uniformToPiece[uniformName]->size()
-			);
-			break;
-		}
-	}
-	#else
-	if(this->window->backend == OPENGL_BACKEND) {
-		auto found = this->uniformToBuffer.find(std::pair<std::string, uint64_t>(uniformName, cacheIndex));
-		bool created = false;
-		if(found == this->uniformToBuffer.end()) {
-			this->createUniformBuffer(uniformName, size, cacheIndex);
-			found = this->uniformToBuffer.find(std::pair<std::string, uint64_t>(uniformName, cacheIndex));
-			created = true;
+				this->uniformToShaderBinding[uniform] = binding;
+			}
 		}
 
-		glBindBuffer(GL_UNIFORM_BUFFER, found.value());
-
-		if(created || !setOnce) { // only update the buffer if we really need to
-			// glBufferData(GL_UNIFORM_BUFFER, size, NULL, GL_DYNAMIC_DRAW); // orphan the buffer
-			glBufferSubData(GL_UNIFORM_BUFFER, 0, size, data);
+		if(bindings.size() != 0) {
+			vk::DescriptorSetLayoutCreateInfo createInfo({}, bindings.size(), bindings.data());
+			this->descriptorLayout = this->window->device.device.createDescriptorSetLayout(createInfo);
 		}
+
+		this->compiled = true;
 	}
 	#endif
 }
@@ -147,22 +125,54 @@ void render::Program::bindTexture(std::string uniformName, unsigned int texture)
 	#endif
 }
 
-#ifdef __switch__
-void render::Program::createUniformMemory(std::string uniformName, unsigned int size) {
+#ifndef __switch__
+void render::Program::createDescriptorSet() {
+	if(this->descriptorSetInitialized || this->uniformToShaderBinding.size() == 0) {
+		return;
+	}
+
+	vk::DescriptorSetAllocateInfo allocateInfo(this->window->descriptorPool, 1, &this->descriptorLayout);
+	this->descriptorSet = this->window->device.device.allocateDescriptorSets(allocateInfo)[0];
+
+	std::vector<vk::WriteDescriptorSet> writes;
+	for(auto &[uniform, binding]: this->uniformToShaderBinding) {
+		vk::DescriptorBufferInfo bufferInfo(this->uniformToVulkanBuffer[uniform].getBuffer(), 0, VK_WHOLE_SIZE);
+		vk::WriteDescriptorSet descriptorWrite(
+			this->descriptorSet, binding, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &bufferInfo, nullptr
+		);
+		writes.push_back(descriptorWrite);
+	}
+	this->window->device.device.updateDescriptorSets(writes.size(), writes.data(), 0, nullptr);
+
+	this->descriptorSetInitialized = true;
+}
+#endif
+
+void render::Program::createUniformBuffer(std::string uniformName, unsigned int size) {
+	#ifdef __switch__
 	this->uniformToPiece[uniformName] = this->window->memory.allocate(
 		DkMemBlockFlags_CpuUncached | DkMemBlockFlags_GpuCached, size, DK_UNIFORM_BUF_ALIGNMENT
 	);
-}
-#else
-void render::Program::createUniformBuffer(std::string uniformName, unsigned int size, uint64_t cacheIndex) {
+	#else
 	if(this->window->backend == OPENGL_BACKEND) {
 		GLuint bufferId;
 		glGenBuffers(1, &bufferId);
-		this->uniformToBuffer[std::pair<std::string, uint64_t>(uniformName, cacheIndex)] = bufferId;
+		this->uniformToBuffer[uniformName] = bufferId;
 
-		glBindBuffer(GL_UNIFORM_BUFFER, this->uniformToBuffer[std::pair<std::string, uint64_t>(uniformName, cacheIndex)]);
+		glBindBuffer(GL_UNIFORM_BUFFER, this->uniformToBuffer[uniformName]);
 		glBufferData(GL_UNIFORM_BUFFER, size, NULL, GL_DYNAMIC_DRAW);
 		glBindBufferBase(GL_UNIFORM_BUFFER, this->uniformToBinding.find(uniformName).value(), bufferId);
 	}
+	else if(this->window->backend == VULKAN_BACKEND) {
+		this->uniformToVulkanBuffer[uniformName] = this->window->allocateVulkanBuffer(
+			vk::BufferCreateInfo(
+				{},
+				size,
+				vk::BufferUsageFlagBits::eUniformBuffer,
+				vk::SharingMode::eExclusive
+			),
+			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+		);
+	}
+	#endif
 }
-#endif
