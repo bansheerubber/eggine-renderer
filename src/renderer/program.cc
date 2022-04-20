@@ -164,7 +164,7 @@ void render::Program::createUniformBuffer(std::string uniformName, unsigned int 
 		glBindBufferBase(GL_UNIFORM_BUFFER, this->uniformToBinding.find(uniformName).value(), bufferId);
 	}
 	else if(this->window->backend == VULKAN_BACKEND) {
-		this->uniformToVulkanBuffer[uniformName] = this->window->memory.allocate(
+		this->uniformToVulkanBuffer[uniformName] = this->window->memory.allocateBuffer(
 			vk::BufferCreateInfo(
 				{},
 				size,

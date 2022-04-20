@@ -17,6 +17,12 @@ namespace render {
 	#define DEFAULT_PAGE_SIZE 4 * 1024
 	#else
 	#define DEFAULT_PAGE_SIZE 50 * 1024
+
+	enum PieceType {
+		INVALID_PIECE = 0,
+		BUFFER_PIECE,
+		IMAGE_PIECE,
+	};
 	#endif
 	
 	// linked list structure that keeps track of free memory regions
@@ -55,7 +61,8 @@ namespace render {
 
 			#ifndef __switch__
 			vk::Buffer buffer;
-			bool valid = false;
+			vk::Image image;
+			PieceType valid = INVALID_PIECE;
 			uint64_t bufferSize = 0;
 			#endif
 	};
@@ -113,7 +120,8 @@ namespace render {
 			#ifdef __switch__
 			Piece* allocate(uint32_t flags, uint64_t size, uint64_t align);
 			#else
-			Piece* allocate(vk::BufferCreateInfo bufferInfo, vk::MemoryPropertyFlags propertyFlags);
+			Piece* allocateBuffer(vk::BufferCreateInfo bufferInfo, vk::MemoryPropertyFlags propertyFlags);
+			Piece* allocateImage(vk::ImageCreateInfo imageInfo, vk::MemoryPropertyFlags propertyFlags);
 			#endif
 
 			void processDeallocationLists();
@@ -124,5 +132,11 @@ namespace render {
 			std::vector<Page*> pages;
 			Window* window;
 			uint64_t allocated = 0;
+
+			#ifndef __switch__
+			Piece* allocate(
+				vk::MemoryRequirements requirements, vk::MemoryPropertyFlags propertyFlags, uint64_t size, uint64_t align
+			);
+			#endif
 	};
 };

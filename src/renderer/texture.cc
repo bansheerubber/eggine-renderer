@@ -143,6 +143,38 @@ void render::Texture::load(
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, textureFilterToGLFilter(this->minFilter));
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, textureFilterToGLFilter(this->magFilter));
 	}
+	else {
+		this->stagingBuffer = this->window->memory.allocateBuffer(
+			vk::BufferCreateInfo(
+				{},
+				bufferSize,
+				vk::BufferUsageFlagBits::eTransferSrc,
+				vk::SharingMode::eExclusive
+			),
+			vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
+		);
+
+		this->image = this->window->memory.allocateImage(
+			vk::ImageCreateInfo(
+				{},
+				vk::ImageType::e2D,
+				channelsAndBitDepthToVulkanFormat(this->channels, this->bitDepth),
+				{ this->width, this->height, 1, },
+				1,
+				1,
+				vk::SampleCountFlagBits::e1,
+				vk::ImageTiling::eOptimal,
+				vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+				vk::SharingMode::eExclusive,
+				0,
+				nullptr,
+				vk::ImageLayout::eUndefined
+			),
+			vk::MemoryPropertyFlagBits::eDeviceLocal
+		);
+
+		memcpy(this->stagingBuffer->map(), buffer, bufferSize);
+	}
 	#endif
 }
 

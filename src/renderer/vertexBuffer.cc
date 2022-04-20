@@ -85,7 +85,7 @@ void render::VertexBuffer::setData(void* data, unsigned int size, unsigned int a
 			this->destroyBuffer();
 			
 			if(this->isDynamicDraw) { // do not use staging buffer if we're dynamic draw
-				this->gpuBuffer = this->window->memory.allocate(
+				this->gpuBuffer = this->window->memory.allocateBuffer(
 					vk::BufferCreateInfo(
 						{},
 						size,
@@ -96,7 +96,7 @@ void render::VertexBuffer::setData(void* data, unsigned int size, unsigned int a
 				);
 			}
 			else {
-				this->stagingBuffer = this->window->memory.allocate(
+				this->stagingBuffer = this->window->memory.allocateBuffer(
 					vk::BufferCreateInfo(
 						{},
 						size,
@@ -106,7 +106,7 @@ void render::VertexBuffer::setData(void* data, unsigned int size, unsigned int a
 					vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent
 				);
 				
-				this->gpuBuffer = this->window->memory.allocate(
+				this->gpuBuffer = this->window->memory.allocateBuffer(
 					vk::BufferCreateInfo(
 						{},
 						size,

@@ -90,6 +90,11 @@ int main(int argc, char* argv[]) {
 	triangleAttributes.addVertexAttribute(&triangleBuffer, 0, 2, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec2), 0);
 	triangleAttributes.addVertexAttribute(&colorBuffer, 1, 3, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec3), 0);
 
+	render::Texture texture(&window);
+	texture.setWrap(render::TEXTURE_WRAP_CLAMP_TO_EDGE, render::TEXTURE_WRAP_CLAMP_TO_EDGE);
+	texture.setFilters(render::TEXTURE_FILTER_LINEAR, render::TEXTURE_FILTER_LINEAR);
+	texture.loadPNGFromFile(filePrefix + "spritesheet.png");
+
 	if(!window.getErrorCount()) {
 		for(unsigned int i = 0; i < 100000; i++) {
 			window.prerender();

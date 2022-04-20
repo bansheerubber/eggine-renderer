@@ -55,7 +55,7 @@ void render::Piece::deallocate() {
 
 	#ifndef __switch__
 	this->parent->window->device.device.destroyBuffer(this->buffer);
-	this->valid = false;
+	this->valid = INVALID_PIECE;
 	#endif
 }
 
@@ -256,19 +256,41 @@ void render::Manager::processDeallocationLists() {
 	}
 }
 
+render::Piece* render::Manager::allocateBuffer(vk::BufferCreateInfo bufferInfo, vk::MemoryPropertyFlags propertyFlags) {
+	vk::Buffer buffer = this->window->device.device.createBuffer(bufferInfo);
+	vk::MemoryRequirements requirements = this->window->device.device.getBufferMemoryRequirements(buffer);
+
+	Piece* piece = this->allocate(requirements, propertyFlags, requirements.size, requirements.alignment);
+	piece->buffer = buffer;
+	piece->bufferSize = bufferInfo.size;
+	piece->valid = BUFFER_PIECE;
+	this->window->device.device.bindBufferMemory(buffer, piece->parent->memory, piece->start);
+	return piece;
+}
+
+render::Piece* render::Manager::allocateImage(vk::ImageCreateInfo imageInfo, vk::MemoryPropertyFlags propertyFlags) {
+	vk::Image image = this->window->device.device.createImage(imageInfo);
+	vk::MemoryRequirements requirements = this->window->device.device.getImageMemoryRequirements(image);
+
+	Piece* piece = this->allocate(requirements, propertyFlags, requirements.size, requirements.alignment);
+	piece->image = image;
+	piece->bufferSize = requirements.size;
+	piece->valid = IMAGE_PIECE;
+	this->window->device.device.bindImageMemory(image, piece->parent->memory, piece->start);
+	return piece;
+}
+
 #ifdef __switch__
 render::Piece* render::Manager::allocate(uint32_t flags, uint64_t size, uint64_t align) {
 #else
-render::Piece* render::Manager::allocate(vk::BufferCreateInfo bufferInfo, vk::MemoryPropertyFlags propertyFlags) {
+render::Piece* render::Manager::allocate(
+	vk::MemoryRequirements requirements, vk::MemoryPropertyFlags propertyFlags, uint64_t size, uint64_t align
+) {
 #endif
 	#ifdef __switch__
 	uint64_t realSize = alignTo(size, align);
 	#else
-	vk::Buffer buffer = this->window->device.device.createBuffer(bufferInfo);
-	vk::MemoryRequirements requirements = this->window->device.device.getBufferMemoryRequirements(buffer);
-	vk::DeviceSize align = requirements.alignment;
-	
-	uint64_t realSize = alignTo(requirements.size, requirements.alignment);
+	uint64_t realSize = alignTo(size, align);
 	uint32_t memoryTypeIndex = (uint32_t)-1;
 	vk::PhysicalDeviceMemoryProperties properties = this->window->device.physicalDevice.getMemoryProperties();
 	for(uint32_t i = 0; i < properties.memoryTypeCount; i++) {
@@ -292,13 +314,6 @@ render::Piece* render::Manager::allocate(vk::BufferCreateInfo bufferInfo, vk::Me
 		if(page->size >= realSize && page->flags == propertyFlags && page->memoryTypeIndex == memoryTypeIndex) {
 		#endif
 			foundPiece = page->allocate(realSize, align);
-			#ifndef __switch__
-			foundPiece->buffer = buffer;
-			foundPiece->bufferSize = bufferInfo.size;
-			foundPiece->valid = true;
-			this->window->device.device.bindBufferMemory(buffer, foundPiece->parent->memory, foundPiece->start);
-			#endif
-
 			if(foundPiece) {
 				return foundPiece;
 			}
@@ -314,17 +329,7 @@ render::Piece* render::Manager::allocate(vk::BufferCreateInfo bufferInfo, vk::Me
 	#endif
 	this->allocated += blockSize;
 
-	#ifdef __switch__
 	return this->pages.back()->allocate(realSize, align);
-	#else
-	Piece* piece = this->pages.back()->allocate(realSize, align);
-	piece->buffer = buffer;
-	piece->bufferSize = bufferInfo.size;
-	piece->valid = true;
-	this->window->device.device.bindBufferMemory(buffer, piece->parent->memory, piece->start);
-
-	return piece;
-	#endif
 }
 
 void render::Manager::print() {

@@ -12,6 +12,7 @@
 #include <string>
 
 #include "../engine/console.h"
+#include "memory.h"
 
 class DeveloperGui;
 
@@ -231,6 +232,35 @@ namespace render {
 			}
 		}
 	}
+
+	inline vk::Format channelsAndBitDepthToVulkanFormat(unsigned int channels, unsigned int bitDepth) {
+		switch(bitDepth) {
+			case 8: {
+				switch(channels) {
+					case 1: {
+						return vk::Format::eR8Srgb;
+					}
+
+					case 2: {
+						return vk::Format::eR8G8Srgb;
+					}
+
+					case 3: {
+						return vk::Format::eR8G8B8Srgb;
+					}
+
+					case 4: {
+						return vk::Format::eR8G8B8A8Srgb;
+					}
+				}
+			}
+		}
+
+		console::error("error: vulkan does not support %u channels and %u bitdepth", channels, bitDepth);
+		exit(1);
+
+		return vk::Format::eR8Srgb;
+	}
 	#endif
 	
 	class Texture {
@@ -282,6 +312,8 @@ namespace render {
 			Piece* samplerDescriptorMemory;
 			#else
 			GLuint texture = GL_INVALID_INDEX;
+			Piece* stagingBuffer;
+			Piece* image;
 			#endif
 	};
 };
