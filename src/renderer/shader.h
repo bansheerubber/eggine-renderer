@@ -34,6 +34,7 @@ namespace render {
 			class Window* window;
 
 			tsl::robin_map<std::string, unsigned int> uniformToBinding;
+			tsl::robin_map<std::string, bool> isUniformSampler;
 			ShaderType type;
 
 			#ifdef __switch__

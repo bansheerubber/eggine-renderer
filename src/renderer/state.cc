@@ -109,6 +109,25 @@ void render::State::bindUniform(std::string uniformName, void* data, uint32_t si
 	#endif
 }
 
+void render::State::bindTexture(std::string uniformName, render::Texture* texture) {
+	#ifdef __switch__
+	this->window->commandBuffer.bindTextures(DkStage_Fragment, 0, dkMakeTextureHandle(0, 0));
+	#else
+	if(this->window->backend == OPENGL_BACKEND) {
+		texture->bind(0);
+		
+		// get the location of the uniform we're going to bind to
+		GLuint location = glGetUniformLocation(this->current.program->program, uniformName.c_str());
+		glUniform1i(location, 0);
+	}
+	else {
+		
+	}
+
+	this->current.program->uniformToTexture[uniformName] = texture;
+	#endif
+}
+
 void render::State::bindVertexAttributes(render::VertexAttributes* attributes) {
 	this->current.attributes = attributes;
 

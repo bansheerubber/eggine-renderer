@@ -26,7 +26,6 @@
 #include "state.h"
 #include "texture.h"
 #include "../util/time.h"
-#include "vulkanMemory.h"
 #include "vulkanPipeline.h"
 
 #include "stencil.h"
@@ -118,7 +117,7 @@ namespace render {
 			#ifdef __switch__
 			RenderBackend backend = DEKO_BACKEND;
 			#else
-			RenderBackend backend = VULKAN_BACKEND;
+			RenderBackend backend = OPENGL_BACKEND;
 			#endif
 
 		protected:
@@ -197,11 +196,15 @@ namespace render {
 			tsl::robin_map<VulkanPipeline, VulkanPipelineResult> pipelineCache;
 
 			vk::CommandPool commandPool;
+			vk::CommandPool transientCommandPool;
 			vk::DescriptorPool descriptorPool;
 
 			vk::Fence frameFence[2];
 			vk::Semaphore isImageAvailable[2];
 			vk::Semaphore isRenderFinished[2];
+
+			std::vector<vk::Fence> memoryCopyFences;
+			std::vector<vk::CommandBuffer> transientCommandBuffers;
 
 			bool swapchainOutOfDate = false;
 
@@ -212,12 +215,11 @@ namespace render {
 			void initializeOpenGL();
 			void initializeVulkan();
 
-			uint32_t findVulkanMemoryType(vk::MemoryRequirements requirements, vk::MemoryPropertyFlags propertyFlags);
-			VulkanBuffer allocateVulkanBuffer(vk::BufferCreateInfo bufferInfo, vk::MemoryPropertyFlags propertyFlags);
-			void copyVulkanBuffer(Piece* source, Piece* destination);
+			vk::CommandBuffer beginTransientCommands();
+			void endTransientCommands(vk::CommandBuffer buffer, vk::Fence fence);
 
-			std::vector<vk::Fence> memoryCopyFences;
-			std::vector<vk::CommandBuffer> memoryCopyCommandBuffers;
+			void copyVulkanBuffer(Piece* source, Piece* destination);
+			void copyVulkanBufferToImage(Piece* source, Piece* destination, uint32_t width, uint32_t height);
 			#endif
 	};
 };

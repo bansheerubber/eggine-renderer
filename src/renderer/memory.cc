@@ -44,6 +44,10 @@ void* render::Piece::map() {
 vk::Buffer render::Piece::getBuffer() {
 	return this->buffer;
 }
+
+vk::Image render::Piece::getImage() {
+	return this->image;
+}
 #endif
 
 void render::Piece::requestDeallocate() {

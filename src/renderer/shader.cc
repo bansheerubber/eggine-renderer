@@ -172,8 +172,12 @@ void render::Shader::processUniforms(const char* buffer, uint64_t bufferSize) {
 			end:
 			unsigned int binding = std::stod(buffer);
 			buffer = "";
+			bool sampler = false;
 			for(unsigned int i = uniformLocation + std::string("uniform ").length(); i < line.length(); i++) {
 				if(line[i] == ' ') {
+					if(buffer == "sampler2D") {
+						sampler = true;
+					}
 					buffer = "";
 				}
 				else if(
@@ -186,6 +190,7 @@ void render::Shader::processUniforms(const char* buffer, uint64_t bufferSize) {
 				}
 			}
 			this->uniformToBinding[buffer] = binding;
+			this->isUniformSampler[buffer] = sampler;
 		}
 	}
 }

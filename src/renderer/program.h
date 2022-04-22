@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "memory.h"
-#include "vulkanMemory.h"
 #include "vulkanPipeline.h"
 
 namespace std {
@@ -44,6 +43,7 @@ namespace render {
 			void compile();
 			void addShader(class Shader* shader);
 			void bindTexture(std::string uniformName, unsigned int texture);
+			void bindTexture(std::string uniformName, class Texture* texture);
 		
 		protected:
 			std::vector<class Shader*> shaders;
@@ -58,6 +58,8 @@ namespace render {
 			tsl::robin_map<std::string, GLuint> uniformToBuffer;
 			tsl::robin_map<std::string, Piece*> uniformToVulkanBuffer;
 			tsl::robin_map<std::string, uint32_t> uniformToShaderBinding;
+			tsl::robin_map<std::string, bool> isUniformSampler;
+			tsl::robin_map<std::string, class Texture*> uniformToTexture;
 
 			std::vector<vk::PipelineShaderStageCreateInfo> stages = std::vector<vk::PipelineShaderStageCreateInfo>(2);
 			uint8_t stageCount = 0;

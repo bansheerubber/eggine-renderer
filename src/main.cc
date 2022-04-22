@@ -66,16 +66,17 @@ int main(int argc, char* argv[]) {
 
 	// vertices
 	glm::vec2 triangleVertices[] = {
-		glm::vec2(-0.5, 0.8),
-		glm::vec2(-0.5, -1.0),
-		glm::vec2(0.5, 0.8),
-		glm::vec2(0.5, -1.0),
+		glm::vec2(-0.501f,  1.001f),
+		glm::vec2(-0.501f, -1.001f),
+		glm::vec2(0.501f, 1.001f),
+		glm::vec2(0.501f, -1.001f),
 	};
 
 	render::VertexBuffer triangleBuffer(&window);
 	triangleBuffer.setDynamicDraw(true);
 	triangleBuffer.setData(triangleVertices, sizeof(triangleVertices), alignof(glm::vec2));
 
+	// colors
 	glm::vec3 triangleColors[] = {
 		glm::vec3(1.0, 0.0, 0.0),
 		glm::vec3(0.0, 1.0, 0.0),
@@ -86,9 +87,21 @@ int main(int argc, char* argv[]) {
 	render::VertexBuffer colorBuffer(&window);
 	colorBuffer.setData(triangleColors, sizeof(triangleColors), alignof(glm::vec3));
 
+	// uvs
+	glm::vec2 triangleUVs[] = {
+		glm::vec2(0.0f, 0.0f),
+		glm::vec2(0.0f, 1.0),
+		glm::vec2(1.0, 0.0f),
+		glm::vec2(1.0, 1.0),
+	};
+
+	render::VertexBuffer uvBuffer(&window);
+	uvBuffer.setData(triangleUVs, sizeof(triangleUVs), alignof(glm::vec2));
+
 	render::VertexAttributes triangleAttributes(&window);
 	triangleAttributes.addVertexAttribute(&triangleBuffer, 0, 2, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec2), 0);
 	triangleAttributes.addVertexAttribute(&colorBuffer, 1, 3, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec3), 0);
+	triangleAttributes.addVertexAttribute(&uvBuffer, 2, 2, render::VERTEX_ATTRIB_FLOAT, 0, sizeof(glm::vec2), 0);
 
 	render::Texture texture(&window);
 	texture.setWrap(render::TEXTURE_WRAP_CLAMP_TO_EDGE, render::TEXTURE_WRAP_CLAMP_TO_EDGE);
@@ -117,12 +130,20 @@ int main(int argc, char* argv[]) {
 			{
 				struct VertexBlock {
 					alignas(8) glm::vec2 offset;
-					alignas(16) glm::vec4 color;
 				} vb;
 				vb.offset = glm::vec2(0, 0.5);
-				vb.color = glm::vec4(0, 1, 1, 1);
-				state.bindUniform("data", &vb, sizeof(vb));
+				state.bindUniform("vertex", &vb, sizeof(vb));
 			}
+
+			{
+				struct FragmentBlock {
+					alignas(16) glm::vec4 color;
+				} vb;
+				vb.color = glm::vec4(0.2, 0.0, 0.2, 1);
+				state.bindUniform("fragment", &vb, sizeof(vb));
+			}
+
+			state.bindTexture("inTexture", &texture);
 
 			state.bindVertexAttributes(&triangleAttributes);
 			state.draw(render::PRIMITIVE_TRIANGLE_STRIP, 0, 4, 0, 1);

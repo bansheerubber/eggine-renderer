@@ -49,6 +49,7 @@ namespace render {
 			#else
 			void* map();
 			vk::Buffer getBuffer();
+			vk::Image getImage();
 			#endif
 
 			void requestDeallocate();

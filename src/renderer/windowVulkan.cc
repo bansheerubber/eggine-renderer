@@ -78,6 +78,13 @@ void render::Window::initializeVulkan() {
 	vk::CommandPoolCreateInfo commandPoolInfo(vk::CommandPoolCreateFlagBits::eResetCommandBuffer, this->device.graphicsQueueIndex);
 	this->commandPool = this->device.device.createCommandPool(commandPoolInfo); 
 
+	// allocate command pool for one-time buffers
+	vk::CommandPoolCreateInfo transientCommandPoolInfo(
+		vk::CommandPoolCreateFlagBits::eResetCommandBuffer | vk::CommandPoolCreateFlagBits::eTransient,
+		this->device.graphicsQueueIndex
+	);
+	this->transientCommandPool = this->device.device.createCommandPool(transientCommandPoolInfo);
+
 	vk::CommandBufferAllocateInfo commandBufferInfo(this->commandPool, vk::CommandBufferLevel::ePrimary, 2);
 	this->renderStates[0] = State(this);
 	result = this->device.device.allocateCommandBuffers(&commandBufferInfo, this->renderStates[0].buffer);
@@ -97,8 +104,9 @@ void render::Window::initializeVulkan() {
 
 	// create descriptor pool
 	std::vector<vk::DescriptorPoolSize> poolSizes;
-	poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eUniformBuffer, 1)); // TODO change to 2, also maybe revisit for textures?
-	vk::DescriptorPoolCreateInfo descriptorInfo({}, 1, (uint32_t)poolSizes.size(), poolSizes.data()); // also change 1 to 2
+	poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eUniformBuffer, 5)); // TODO change to 2, also maybe revisit for textures?
+	poolSizes.push_back(vk::DescriptorPoolSize(vk::DescriptorType::eCombinedImageSampler, 5));
+	vk::DescriptorPoolCreateInfo descriptorInfo({}, 5, (uint32_t)poolSizes.size(), poolSizes.data()); // also change 1 to 2
 	this->descriptorPool = this->device.device.createDescriptorPool(descriptorInfo);
 }
 
@@ -381,16 +389,5 @@ void render::Window::setupDevice() {
 
 	this->graphicsQueue = this->device.device.getQueue(this->device.graphicsQueueIndex, 0);
 	this->presentationQueue = this->device.device.getQueue(this->device.presentationQueueIndex, 0);
-}
-
-uint32_t render::Window::findVulkanMemoryType(vk::MemoryRequirements requirements, vk::MemoryPropertyFlags propertyFlags) {
-	vk::PhysicalDeviceMemoryProperties properties = this->device.physicalDevice.getMemoryProperties();
-	for(uint32_t i = 0; i < properties.memoryTypeCount; i++) {
-		if((requirements.memoryTypeBits & (1 << i)) && (properties.memoryTypes[i].propertyFlags & propertyFlags) == propertyFlags) {
-			return i;
-		}
-	}
-
-	return -1;
 }
 #endif

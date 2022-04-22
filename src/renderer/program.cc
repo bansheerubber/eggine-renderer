@@ -91,15 +91,20 @@ void render::Program::compile() {
 		std::vector<vk::DescriptorSetLayoutBinding> bindings;
 		for(Shader* shader: this->shaders) {
 			for(auto &[uniform, binding]: shader->uniformToBinding) {
+				if(this->uniformToShaderBinding.find(uniform) != this->uniformToShaderBinding.end()) {
+					continue;
+				}
+				
 				bindings.push_back(vk::DescriptorSetLayoutBinding(
 					binding,
-					vk::DescriptorType::eUniformBuffer,
+					shader->isUniformSampler[uniform] ? vk::DescriptorType::eCombinedImageSampler : vk::DescriptorType::eUniformBuffer,
 					1,
-					vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
+					shader->isUniformSampler[uniform] ? vk::ShaderStageFlagBits::eFragment : vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
 					nullptr
 				));
 
 				this->uniformToShaderBinding[uniform] = binding;
+				this->isUniformSampler[uniform] = shader->isUniformSampler[uniform];
 			}
 		}
 
@@ -125,8 +130,29 @@ void render::Program::bindTexture(std::string uniformName, unsigned int texture)
 	#endif
 }
 
+void render::Program::bindTexture(std::string uniformName, render::Texture* texture) {
+	#ifdef __switch__
+	this->window->commandBuffer.bindTextures(DkStage_Fragment, 0, dkMakeTextureHandle(0, 0));
+	#else
+	if(this->window->backend == OPENGL_BACKEND) {
+		texture->bind(0);
+		
+		// get the location of the uniform we're going to bind to
+		GLuint location = glGetUniformLocation(this->program, uniformName.c_str());
+		glUniform1i(location, 0);
+	}
+	else {
+		
+	}
+
+	this->uniformToTexture[uniformName] = texture;
+	#endif
+}
+
 #ifndef __switch__
 void render::Program::createDescriptorSet() {
+	this->window->graphicsQueue.waitIdle();
+	
 	if(this->descriptorSetInitialized || this->uniformToShaderBinding.size() == 0) {
 		return;
 	}
@@ -134,14 +160,43 @@ void render::Program::createDescriptorSet() {
 	vk::DescriptorSetAllocateInfo allocateInfo(this->window->descriptorPool, 1, &this->descriptorLayout);
 	this->descriptorSet = this->window->device.device.allocateDescriptorSets(allocateInfo)[0];
 
-	std::vector<vk::WriteDescriptorSet> writes;
+	std::vector<vk::WriteDescriptorSet> writes(uniformToShaderBinding.size());
+	std::vector<vk::DescriptorBufferInfo> bufferInfos(uniformToShaderBinding.size());
+	std::vector<vk::DescriptorImageInfo> imageInfos(uniformToShaderBinding.size());
 	for(auto &[uniform, binding]: this->uniformToShaderBinding) {
-		vk::DescriptorBufferInfo bufferInfo(this->uniformToVulkanBuffer[uniform]->getBuffer(), 0, VK_WHOLE_SIZE);
-		vk::WriteDescriptorSet descriptorWrite(
-			this->descriptorSet, binding, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &bufferInfo, nullptr
+		if(this->isUniformSampler[uniform]) {
+			if(this->uniformToTexture[uniform] == nullptr) {
+				console::error("program: could not find texture '%s'\n", uniform.c_str());
+				exit(1);
+			}
+			
+			imageInfos[binding] = vk::DescriptorImageInfo(
+				this->uniformToTexture[uniform]->sampler,
+				this->uniformToTexture[uniform]->imageView,
+				vk::ImageLayout::eShaderReadOnlyOptimal
+			);
+		}
+		else {
+			if(this->uniformToVulkanBuffer[uniform] == nullptr) {
+				console::error("program: could not find uniform '%s'\n", uniform.c_str());
+				exit(1);
+			}
+			
+			bufferInfos[binding] = vk::DescriptorBufferInfo(this->uniformToVulkanBuffer[uniform]->getBuffer(), 0, VK_WHOLE_SIZE);
+		}
+
+		writes[binding] = vk::WriteDescriptorSet(
+			this->descriptorSet,
+			binding,
+			0,
+			1,
+			this->isUniformSampler[uniform] ? vk::DescriptorType::eCombinedImageSampler : vk::DescriptorType::eUniformBuffer,
+			this->isUniformSampler[uniform] ? &imageInfos[binding] : nullptr,
+			this->isUniformSampler[uniform] ? nullptr : &bufferInfos[binding],
+			nullptr
 		);
-		writes.push_back(descriptorWrite);
 	}
+
 	this->window->device.device.updateDescriptorSets(writes.size(), writes.data(), 0, nullptr);
 
 	this->descriptorSetInitialized = true;

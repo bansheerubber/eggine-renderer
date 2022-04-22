@@ -69,6 +69,7 @@ namespace render {
 
 			void bindProgram(class Program* program);
 			void bindUniform(std::string uniformName, void* data, uint32_t size);
+			void bindTexture(std::string uniformName, class Texture* texture);
 			void bindVertexAttributes(class VertexAttributes* attributes);
 
 			void setStencilFunction(StencilFunction func, unsigned int reference, unsigned int mask);

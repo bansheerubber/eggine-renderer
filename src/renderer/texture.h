@@ -205,6 +205,22 @@ namespace render {
 		}
 	}
 
+	inline vk::Filter textureFilterToVulkanFilter(TextureFilter type) {
+		switch(type) {
+			case TEXTURE_FILTER_NEAREST: {
+				return vk::Filter::eNearest;
+			}
+
+			case TEXTURE_FILTER_LINEAR: {
+				return vk::Filter::eLinear;
+			}
+
+			default: {
+				return vk::Filter::eLinear;
+			}
+		}
+	}
+
 	inline GLenum textureWrapToGLWrap(TextureWrap wrap) {
 		switch(wrap) {
 			case TEXTURE_WRAP_REPEAT: {
@@ -265,6 +281,7 @@ namespace render {
 	
 	class Texture {
 		friend DeveloperGui;
+		friend class Program;
 		friend class Window;
 		
 		public:
@@ -312,8 +329,11 @@ namespace render {
 			Piece* samplerDescriptorMemory;
 			#else
 			GLuint texture = GL_INVALID_INDEX;
+
 			Piece* stagingBuffer;
 			Piece* image;
+			vk::ImageView imageView;
+			vk::Sampler sampler;
 			#endif
 	};
 };

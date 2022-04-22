@@ -254,6 +254,7 @@ void render::Window::deinitialize() {
 		}
 
 		this->device.device.destroyCommandPool(this->commandPool);
+		this->device.device.destroyCommandPool(this->transientCommandPool);
 		this->device.device.destroyDescriptorPool(this->descriptorPool);
 
 		this->device.device.destroy();
@@ -421,11 +422,11 @@ void render::Window::render() {
 		}
 		this->memoryCopyFences.clear();
 
-		if(this->memoryCopyCommandBuffers.size() > 0) {
+		if(this->transientCommandBuffers.size() > 0) {
 			this->device.device.freeCommandBuffers(
-				this->commandPool, this->memoryCopyCommandBuffers.size(), this->memoryCopyCommandBuffers.data()
+				this->transientCommandPool, this->transientCommandBuffers.size(), this->transientCommandBuffers.data()
 			);
-			this->memoryCopyCommandBuffers.clear();
+			this->transientCommandBuffers.clear();
 		}
 
 		this->framePingPong = (this->framePingPong + 1) % 2;

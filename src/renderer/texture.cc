@@ -174,6 +174,105 @@ void render::Texture::load(
 		);
 
 		memcpy(this->stagingBuffer->map(), buffer, bufferSize);
+
+		// handle layout transitions
+		{
+			vk::CommandBuffer buffer = this->window->beginTransientCommands();
+
+			vk::ImageMemoryBarrier barrier(
+				{},
+				vk::AccessFlagBits::eTransferWrite,
+				vk::ImageLayout::eUndefined,
+				vk::ImageLayout::eTransferDstOptimal,
+				VK_QUEUE_FAMILY_IGNORED,
+				VK_QUEUE_FAMILY_IGNORED,
+				this->image->getImage(),
+				vk::ImageSubresourceRange(
+					vk::ImageAspectFlagBits::eColor, // aspect mask
+					0, // base mip level
+					1, // level count
+					0, // base array layer
+					1 // layer count
+				)
+			);
+
+			buffer.pipelineBarrier(
+				vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer, {}, 0, nullptr, 0, nullptr, 1, &barrier
+			);
+
+			this->window->endTransientCommands(buffer, {});
+		}
+
+		// copy buffer into valid image memory
+		this->window->copyVulkanBufferToImage(this->stagingBuffer, this->image, this->width, this->height);
+
+		// transfer the layout to shader mode
+		{
+			vk::CommandBuffer buffer = this->window->beginTransientCommands();
+
+			vk::ImageMemoryBarrier barrier(
+				vk::AccessFlagBits::eTransferWrite,
+				vk::AccessFlagBits::eShaderRead,
+				vk::ImageLayout::eTransferDstOptimal,
+				vk::ImageLayout::eShaderReadOnlyOptimal,
+				VK_QUEUE_FAMILY_IGNORED,
+				VK_QUEUE_FAMILY_IGNORED,
+				this->image->getImage(),
+				vk::ImageSubresourceRange(
+					vk::ImageAspectFlagBits::eColor, // aspect mask
+					0, // base mip level
+					1, // level count
+					0, // base array layer
+					1 // layer count
+				)
+			);
+
+			buffer.pipelineBarrier(
+				vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, 0, nullptr, 0, nullptr, 1, &barrier
+			);
+
+			this->window->endTransientCommands(buffer, {});
+		}
+
+		// create image view
+		vk::ImageViewCreateInfo viewInfo(
+			{},
+			this->image->getImage(),
+			vk::ImageViewType::e2D,
+			channelsAndBitDepthToVulkanFormat(this->channels, this->bitDepth),
+			{ vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity, vk::ComponentSwizzle::eIdentity, },
+			vk::ImageSubresourceRange(
+				vk::ImageAspectFlagBits::eColor, // aspect mask
+				0, // base mip level
+				1, // level count
+				0, // base array layer
+				1 // layer count
+			)
+		);
+
+		this->imageView = this->window->device.device.createImageView(viewInfo);
+
+		// create sampler
+		vk::SamplerCreateInfo samplerInfo(
+			{},
+			textureFilterToVulkanFilter(this->magFilter),
+			textureFilterToVulkanFilter(this->minFilter),
+			vk::SamplerMipmapMode::eNearest,
+			vk::SamplerAddressMode::eRepeat,
+			vk::SamplerAddressMode::eRepeat,
+			vk::SamplerAddressMode::eRepeat,
+			0,
+			false,
+			0,
+			false,
+			vk::CompareOp::eNever,
+			0,
+			0,
+			vk::BorderColor::eFloatTransparentBlack,
+			false
+		);
+
+		this->sampler = this->window->device.device.createSampler(samplerInfo);
 	}
 	#endif
 }
